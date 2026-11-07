@@ -1,17 +1,49 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "es2022"
+    ],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "strict": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
+    "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "incremental": true,
+    "types": [
+      "node"
+    ],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "allowJs": true,
+    "esModuleInterop": true
   },
-  "include": ["src", "test"]
+  "include": [
+    "next-env.d.ts",
+    "src",
+    "test",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "out"
+  ]
 }
