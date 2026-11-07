@@ -6,6 +6,7 @@ import {
   calculate,
   confirmFilingObligation,
   getRules,
+  type BusinessInput,
   type CalculationResult,
   type EmploymentInput,
   type FilingObligation,
@@ -44,6 +45,17 @@ export interface InterestRow {
   tax: string;
 }
 
+export interface BusinessRow {
+  key: string;
+  name: string;
+  origin: 'local' | 'foreign';
+  /** Foreign only: received in foreign currency through a Sri Lankan bank. */
+  remitted: boolean;
+  gross: string;
+  expenses: string;
+  tax: string;
+}
+
 export const QUESTIONS: { id: keyof Answers; text: string; help?: string }[] = [
   {
     id: 'resident',
@@ -52,8 +64,8 @@ export const QUESTIONS: { id: keyof Answers; text: string; help?: string }[] = [
   },
   {
     id: 'hasOtherIncome',
-    text: 'Any income other than salary and bank interest?',
-    help: 'Rent, business or freelance income, money from abroad, dividends, or selling land or shares.',
+    text: 'Any income other than salary, bank interest or freelance work?',
+    help: 'Rent, dividends, a salary from a foreign employer, or selling land or shares. Freelance income goes in Part D.',
   },
   {
     id: 'hasOtherReliefs',
@@ -100,7 +112,12 @@ export const shortDate = (iso: string) =>
     timeZone: 'Asia/Colombo',
   });
 
-function parseRows(employers: EmployerRow[], interests: InterestRow[]) {
+function parseRows(
+  employers: EmployerRow[],
+  interests: InterestRow[],
+  businessRows: BusinessRow[],
+  instalments: string,
+) {
   const errors: Record<string, string> = {};
   const num = (key: string, raw: string): number => {
     const p = parseAmount(raw);
@@ -135,8 +152,34 @@ function parseRows(employers: EmployerRow[], interests: InterestRow[]) {
       source: { method: 'manual' as const },
     }));
 
-  return { emp, int, errors };
+  const biz: BusinessInput[] = businessRows
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => filled(r.gross, r.expenses, r.tax))
+    .map(({ r, i }) => ({
+      id: r.key,
+      description: r.name.trim() || `Freelance income ${i + 1}`,
+      origin: r.origin,
+      remittedViaBank: r.origin === 'foreign' && r.remitted,
+      gross: num(`${r.key}.gross`, r.gross),
+      expenses: num(`${r.key}.expenses`, r.expenses),
+      taxDeducted: num(`${r.key}.tax`, r.tax),
+      source: { method: 'manual' as const },
+    }));
+
+  const instalmentsPaid = num('instalments', instalments);
+
+  return { emp, int, biz, instalmentsPaid, errors };
 }
+
+export const newBusinessRow = (key: string): BusinessRow => ({
+  key,
+  name: '',
+  origin: 'foreign',
+  remitted: true,
+  gross: '',
+  expenses: '',
+  tax: '',
+});
 
 export function useTaxForm() {
   const [answers, setAnswers] = useState<Answers>({
@@ -148,19 +191,24 @@ export function useTaxForm() {
   });
   const [employers, setEmployers] = useState<EmployerRow[]>([{ key: 'e1', name: '', gross: '', apit: '' }]);
   const [interests, setInterests] = useState<InterestRow[]>([{ key: 'i1', name: '', gross: '', tax: '' }]);
+  const [businessRows, setBusinessRows] = useState<BusinessRow[]>([]);
+  const [instalments, setInstalments] = useState('');
   const nextId = useRef(2);
 
   // Dates come from the viewer's clock, after hydration (pages are pre-rendered at build time).
   const [today, setToday] = useState<Date | null>(null);
   useEffect(() => setToday(new Date()), []);
 
-  const { emp, int, errors } = useMemo(() => parseRows(employers, interests), [employers, interests]);
+  const { emp, int, biz, instalmentsPaid, errors } = useMemo(
+    () => parseRows(employers, interests, businessRows, instalments),
+    [employers, interests, businessRows, instalments],
+  );
   const hasErrors = Object.keys(errors).length > 0;
 
   const result: CalculationResult | null = useMemo(() => {
-    if (hasErrors || (emp.length === 0 && int.length === 0)) return null;
-    return calculate({ ya: YA, employments: emp, interests: int }, rules);
-  }, [emp, int, hasErrors]);
+    if (hasErrors || (emp.length === 0 && int.length === 0 && biz.length === 0)) return null;
+    return calculate({ ya: YA, employments: emp, interests: int, businesses: biz, instalmentsPaid }, rules);
+  }, [emp, int, biz, instalmentsPaid, hasErrors]);
 
   const answeredCount = Object.values(answers).filter((v) => v !== null).length;
   const allAnswered = answeredCount === QUESTIONS.length;
@@ -175,11 +223,12 @@ export function useTaxForm() {
       hasIrdFile: answers.hasIrdFile!,
       employerCount: emp.length,
       approxInterest: sum(int.map((i) => i.gross)),
+      businessCount: biz.length,
     });
     if (pre.status === 'out_of_scope') return pre;
     if (!result) return null;
     return confirmFilingObligation(pre, result);
-  }, [allAnswered, answers, emp, int, result]);
+  }, [allAnswered, answers, emp, int, biz, result]);
 
   const outOfScope = obligation?.status === 'out_of_scope';
   const newKey = (prefix: string) => `${prefix}${nextId.current++}`;
@@ -194,7 +243,7 @@ export function useTaxForm() {
   const readiness = computeReadiness({
     answeredCount,
     totalQuestions: QUESTIONS.length,
-    incomeEntered: emp.length + int.length > 0,
+    incomeEntered: emp.length + int.length + biz.length > 0,
     interestSettled: noInterest || int.length > 0,
     checksPassed: !!result && !hasErrors && result.warnings.length === 0,
     hasErrors,
@@ -221,8 +270,18 @@ export function useTaxForm() {
     noInterest,
     setNoInterest,
 
+    businessRows,
+    updateBusiness: (key: string, patch: Partial<BusinessRow>) =>
+      setBusinessRows((rs) => rs.map((x) => (x.key === key ? { ...x, ...patch } : x))),
+    addBusiness: () => setBusinessRows((rs) => [...rs, newBusinessRow(newKey('b'))]),
+    removeBusiness: (key: string) => setBusinessRows((rs) => rs.filter((x) => x.key !== key)),
+
+    instalments,
+    setInstalments,
+
     emp,
     int,
+    biz,
     errors,
     hasErrors,
     result,

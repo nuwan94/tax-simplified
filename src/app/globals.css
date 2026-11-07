@@ -864,6 +864,93 @@ button {
   width: 100%;
 }
 
+/* ---------- freelance entries (Part D) ---------- */
+
+.entry-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--sheet-2);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.entry-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -4px -6px 4px 0;
+}
+.entry-card .cell {
+  margin-bottom: 10px;
+}
+.inline-q {
+  border: 0;
+  margin: 0 0 12px;
+  padding: 0;
+  min-width: 0;
+}
+.inline-q legend {
+  font-weight: 600;
+  font-size: 15px;
+  padding: 0;
+  margin-bottom: 6px;
+}
+.inline-q .q-help {
+  margin: -2px 0 8px;
+}
+.inline-q .seg label {
+  min-width: 0;
+  padding: 0 16px;
+}
+.triple {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .triple {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.entry-card .cell-label {
+  display: block;
+}
+.entry-card .cell.num,
+.single-field .cell.num {
+  text-align: left;
+}
+.entry-net {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.entry-net .num {
+  font-family: var(--font-figures);
+  color: var(--text);
+  font-weight: 600;
+}
+.rate-tag {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--head);
+  color: var(--muted);
+}
+.rate-tag.cap {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+.single-field {
+  max-width: 360px;
+  padding: 14px 0 18px;
+}
+.single-field .cell-label {
+  display: block;
+}
+
 /* ---------- no-interest checkbox ---------- */
 
 .check {
@@ -1022,6 +1109,9 @@ button {
 }
 .ladder .relief {
   background: #b5c9a4;
+}
+.ladder .fx {
+  background: repeating-linear-gradient(135deg, #c99a3e 0 5px, #ddb768 5px 10px);
 }
 .ladder .b1 {
   background: #c6d4f2;

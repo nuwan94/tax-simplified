@@ -3,6 +3,8 @@
 import type { CalculationResult, FilingObligation } from '@/index';
 import { formatLKR, formatSigned } from '@/lib/money';
 import { Readiness } from './Readiness';
+import { AmountCell, Cell } from './Fields';
+import { FreelanceParts } from './FreelanceParts';
 import { TaxLadder } from './TaxLadder';
 import { AlertIcon, CalendarIcon, CheckIcon, InfoIcon, PlusIcon, PrinterIcon, XIcon } from './Icons';
 import {
@@ -18,6 +20,7 @@ import {
 } from './useTaxForm';
 
 export function Calculator() {
+  const form = useTaxForm();
   const {
     answers,
     setAnswer,
@@ -42,7 +45,7 @@ export function Calculator() {
     noInterest,
     setNoInterest,
     readiness,
-  } = useTaxForm();
+  } = form;
 
   return (
     <div className="calc">
@@ -240,6 +243,8 @@ export function Calculator() {
             </>
           )}
         </section>
+
+        <FreelanceParts f={form} />
       </div>
 
       <aside className="calc-result">
@@ -261,52 +266,6 @@ export function Calculator() {
           <span className="mobile-bar-amount">{formatLKR(result.balance)}</span>
         </a>
       )}
-    </div>
-  );
-}
-
-// ---------- cells ----------
-
-function Cell({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="cell" role="cell">
-      <span className="cell-label" aria-hidden="true">
-        {label}
-      </span>
-      {children}
-    </div>
-  );
-}
-
-function AmountCell(props: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  error?: string;
-  hint?: string;
-}) {
-  const { label, value, onChange, error, hint } = props;
-  return (
-    <div className={`cell num${error ? ' has-error' : ''}`} role="cell">
-      <span className="cell-label" aria-hidden="true">
-        {label}
-      </span>
-      <span className="amount">
-        <span className="amount-prefix" aria-hidden="true">
-          Rs
-        </span>
-        <input
-          type="text"
-          inputMode="numeric"
-          autoComplete="off"
-          placeholder="0"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          aria-label={label}
-          aria-invalid={!!error}
-        />
-      </span>
-      {error ? <span className="field-error">{error}</span> : hint && <span className="field-hint">{hint}</span>}
     </div>
   );
 }
@@ -391,7 +350,9 @@ function ResultPanel(props: {
             {!allAnswered || !obligation ? (
               <span className="muted">Complete Part A</span>
             ) : mustFile ? (
-              <span className="status-pill warn">Required · Simplified Return</span>
+              <span className="status-pill warn">
+                Required · {result.returnType === 'standard' ? 'Standard' : 'Simplified'} Return
+              </span>
             ) : (
               <span className="status-pill ok">
                 <CheckIcon /> Not required
@@ -433,6 +394,20 @@ function ResultPanel(props: {
         <Note tone="bad" icon={<AlertIcon />}>
           The final payment date ({shortDate(rules.payments.final.due)}) has passed. Unpaid tax can attract a 20%
           penalty plus 1.5% interest a month.
+        </Note>
+      )}
+      {result.remittanceSaving !== undefined && result.remittanceSaving > 0 && (
+        <Note tone="warn" icon={<InfoIcon />}>
+          Foreign income brought in through a Sri Lankan bank in foreign currency is capped at{' '}
+          {Math.round(rules.foreignSourceIncome.maxRate * 100)}%. Doing that would have cut this bill by{' '}
+          <strong>{formatLKR(result.remittanceSaving)}</strong>.
+        </Note>
+      )}
+      {result.businessIncome > 0 && (
+        <Note tone="warn" icon={<CalendarIcon />}>
+          Freelance income isn&rsquo;t taxed at source, so IRD expects quarterly instalments (
+          {rules.payments.instalments.map((i) => shortDate(i.due).replace(/ \d{4}$/, '')).join(', ')}). A missed
+          instalment adds a 10% penalty.
         </Note>
       )}
       {result.outcome === 'refund' && (
