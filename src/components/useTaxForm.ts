@@ -14,6 +14,7 @@ import {
   type OutOfScopeReason,
 } from '@/index';
 import { parseAmount } from '@/lib/money';
+import { convertMonthly, getFxRates, parseForeignAmount, yaMonths, type Conversion } from '@/lib/fx';
 import { computeReadiness } from '@/lib/readiness';
 
 // Shared, design-independent state and logic for every calculator UI.
@@ -51,10 +52,17 @@ export interface BusinessRow {
   origin: 'local' | 'foreign';
   /** Foreign only: received in foreign currency through a Sri Lankan bank. */
   remitted: boolean;
+  /** Enter the income in rupees, or in US dollars month by month (converted at CBSL monthly averages). */
+  currency: 'LKR' | 'USD';
   gross: string;
+  /** USD mode: amount received per month, keyed "YYYY-MM". */
+  monthly: Record<string, string>;
   expenses: string;
   tax: string;
 }
+
+export const usdRates = getFxRates('USD', YA);
+export const MONTHS = yaMonths(YA);
 
 export const QUESTIONS: { id: keyof Answers; text: string; help?: string }[] = [
   {
@@ -152,23 +160,46 @@ function parseRows(
       source: { method: 'manual' as const },
     }));
 
+  // USD rows: convert each month at the CBSL monthly average.
+  const conversions: Record<string, Conversion> = {};
+  for (const r of businessRows) {
+    if (r.currency !== 'USD') continue;
+    const amounts: Record<string, number> = {};
+    for (const m of MONTHS) {
+      const p = parseForeignAmount(r.monthly[m] ?? '');
+      if ('error' in p) errors[`${r.key}.m.${m}`] = p.error;
+      else if ('value' in p) amounts[m] = p.value;
+    }
+    conversions[r.key] = convertMonthly(amounts, usdRates);
+  }
+
   const biz: BusinessInput[] = businessRows
     .map((r, i) => ({ r, i }))
-    .filter(({ r }) => filled(r.gross, r.expenses, r.tax))
-    .map(({ r, i }) => ({
-      id: r.key,
-      description: r.name.trim() || `Freelance income ${i + 1}`,
-      origin: r.origin,
-      remittedViaBank: r.origin === 'foreign' && r.remitted,
-      gross: num(`${r.key}.gross`, r.gross),
-      expenses: num(`${r.key}.expenses`, r.expenses),
-      taxDeducted: num(`${r.key}.tax`, r.tax),
-      source: { method: 'manual' as const },
-    }));
+    .filter(({ r }) =>
+      r.currency === 'USD'
+        ? filled(...Object.values(r.monthly), r.expenses, r.tax)
+        : filled(r.gross, r.expenses, r.tax),
+    )
+    .map(({ r, i }) => {
+      const conv = conversions[r.key];
+      return {
+        id: r.key,
+        description: r.name.trim() || `Freelance income ${i + 1}`,
+        origin: r.origin,
+        remittedViaBank: r.origin === 'foreign' && r.remitted,
+        gross: conv ? conv.totalLkr : num(`${r.key}.gross`, r.gross),
+        expenses: num(`${r.key}.expenses`, r.expenses),
+        taxDeducted: num(`${r.key}.tax`, r.tax),
+        ...(conv && conv.totalForeign > 0
+          ? { foreign: { currency: 'USD', amount: conv.totalForeign, basis: 'cbsl-monthly-average' as const } }
+          : {}),
+        source: { method: 'manual' as const },
+      };
+    });
 
   const instalmentsPaid = num('instalments', instalments);
 
-  return { emp, int, biz, instalmentsPaid, errors };
+  return { emp, int, biz, instalmentsPaid, conversions, errors };
 }
 
 export const newBusinessRow = (key: string): BusinessRow => ({
@@ -176,7 +207,9 @@ export const newBusinessRow = (key: string): BusinessRow => ({
   name: '',
   origin: 'foreign',
   remitted: true,
+  currency: 'USD',
   gross: '',
+  monthly: {},
   expenses: '',
   tax: '',
 });
@@ -199,7 +232,7 @@ export function useTaxForm() {
   const [today, setToday] = useState<Date | null>(null);
   useEffect(() => setToday(new Date()), []);
 
-  const { emp, int, biz, instalmentsPaid, errors } = useMemo(
+  const { emp, int, biz, instalmentsPaid, conversions, errors } = useMemo(
     () => parseRows(employers, interests, businessRows, instalments),
     [employers, interests, businessRows, instalments],
   );
@@ -282,6 +315,7 @@ export function useTaxForm() {
     emp,
     int,
     biz,
+    conversions,
     errors,
     hasErrors,
     result,

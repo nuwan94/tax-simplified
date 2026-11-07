@@ -64,11 +64,7 @@ export function calculate(input: CalculationInput, rules: Rules): CalculationRes
             key,
             label,
             amount: sum(xs.map(net)),
-            formula: xs.some((b) => b.expenses > 0)
-              ? `${fmt(sum(xs.map((b) => b.gross)))} less expenses ${fmt(sum(xs.map((b) => Math.min(b.expenses, b.gross))))}`
-              : xs.length > 1
-                ? xs.map((b) => fmt(b.gross)).join(' + ')
-                : undefined,
+            formula: [fxNote(xs), expensesNote(xs)].filter(Boolean).join('; ') || undefined,
             inputIds: ids(xs),
           },
         ]
@@ -193,6 +189,25 @@ export function calculate(input: CalculationInput, rules: Rules): CalculationRes
     trace,
     warnings: collectWarnings(input, rules, c.foreignTaxBeforeCredit),
   };
+}
+
+/** "USD 10,000 at CBSL monthly averages = Rs 3,050,000" for converted entries. */
+function fxNote(xs: BusinessInput[]): string {
+  const conv = xs.filter((b) => b.foreign);
+  if (!conv.length) return '';
+  const byCcy = new Map<string, number>();
+  for (const b of conv) byCcy.set(b.foreign!.currency, (byCcy.get(b.foreign!.currency) ?? 0) + b.foreign!.amount);
+  const amounts = [...byCcy].map(
+    ([c, a]) => `${c} ${a.toLocaleString('en-LK', { minimumFractionDigits: a % 1 ? 2 : 0, maximumFractionDigits: 2 })}`,
+  );
+  return `${amounts.join(' + ')} at CBSL monthly averages = Rs ${fmt(sum(conv.map((b) => b.gross)))}`;
+}
+
+function expensesNote(xs: BusinessInput[]): string {
+  if (xs.some((b) => b.expenses > 0)) {
+    return `${fmt(sum(xs.map((b) => b.gross)))} less expenses ${fmt(sum(xs.map((b) => Math.min(b.expenses, b.gross))))}`;
+  }
+  return xs.length > 1 ? xs.map((b) => fmt(b.gross)).join(' + ') : '';
 }
 
 /** The numbers only: shared by the main result and the "what if remitted" comparison. */

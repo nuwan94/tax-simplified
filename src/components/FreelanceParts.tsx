@@ -2,7 +2,77 @@
 
 import { AmountCell, Cell } from './Fields';
 import { PlusIcon, XIcon } from './Icons';
-import { fmt, rules, type TaxForm } from './useTaxForm';
+import { MONTHS, fmt, rules, usdRates, type TaxForm } from './useTaxForm';
+import { monthLabel, type Conversion } from '@/lib/fx';
+
+/** Twelve month cells in US dollars, each converted at that month's CBSL average. */
+function MonthlyUsd(props: {
+  rowKey: string;
+  values: Record<string, string>;
+  errors: Record<string, string>;
+  conversion: Conversion | undefined;
+  onChange: (month: string, v: string) => void;
+}) {
+  const { rowKey, values, errors, conversion, onChange } = props;
+  const lkrFor = (m: string) => conversion?.lines.find((l) => l.month === m)?.lkr;
+  return (
+    <div className="months">
+      <div className="months-grid">
+        {MONTHS.map((m) => {
+          const rate = usdRates.monthly[m]!.average;
+          const err = errors[`${rowKey}.m.${m}`];
+          const lkr = lkrFor(m);
+          return (
+            <label key={m} className={`month${err ? ' has-error' : ''}`}>
+              <span className="month-name">{monthLabel(m)}</span>
+              <span className="amount">
+                <span className="amount-prefix" aria-hidden="true">
+                  $
+                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  placeholder="0"
+                  value={values[m] ?? ''}
+                  onChange={(e) => onChange(m, e.target.value)}
+                  aria-label={`US dollars received in ${monthLabel(m)}`}
+                  aria-invalid={!!err}
+                />
+              </span>
+              <span className="month-conv">
+                {err ? (
+                  <span className="field-error">{err}</span>
+                ) : (
+                  <>
+                    × {rate.toFixed(2)}
+                    {lkr !== undefined && <b>Rs {fmt(lkr)}</b>}
+                  </>
+                )}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+      <p className="months-total">
+        <span>
+          Total{' '}
+          <b className="num">
+            USD {(conversion?.totalForeign ?? 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
+          </b>{' '}
+          = <b className="num">Rs {fmt(conversion?.totalLkr ?? 0)}</b>
+        </span>
+        <small>
+          Converted at each month&rsquo;s average{' '}
+          <a href={usdRates.source} target="_blank" rel="noreferrer">
+            CBSL USD rate
+          </a>
+          . The law uses the rate on the day you received it, so this is a close estimate.
+        </small>
+      </p>
+    </div>
+  );
+}
 
 /** Part D (freelance & foreign income) and Part E (tax already paid). */
 export function FreelanceParts({ f }: { f: TaxForm }) {
@@ -93,14 +163,43 @@ export function FreelanceParts({ f }: { f: TaxForm }) {
                 </fieldset>
               )}
 
-              <div className="triple">
-                <AmountCell
-                  label="Income for the year"
-                  hint="Rupee amount credited to you"
-                  value={r.gross}
-                  error={f.errors[`${r.key}.gross`]}
-                  onChange={(v) => f.updateBusiness(r.key, { gross: v })}
+              <fieldset className="inline-q">
+                <legend>Enter the income in</legend>
+                <div className="seg" role="radiogroup" aria-label="Enter the income in">
+                  {(['USD', 'LKR'] as const).map((c) => (
+                    <label key={c} className={r.currency === c ? 'on' : ''}>
+                      <input
+                        type="radio"
+                        name={`${r.key}-ccy`}
+                        checked={r.currency === c}
+                        onChange={() => f.updateBusiness(r.key, { currency: c })}
+                      />
+                      {c === 'USD' ? 'US dollars, by month' : 'Rupees, yearly total'}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {r.currency === 'USD' && (
+                <MonthlyUsd
+                  rowKey={r.key}
+                  values={r.monthly}
+                  errors={f.errors}
+                  conversion={f.conversions[r.key]}
+                  onChange={(m, v) => f.updateBusiness(r.key, { monthly: { ...r.monthly, [m]: v } })}
                 />
+              )}
+
+              <div className={r.currency === 'USD' ? 'pair-2' : 'triple'}>
+                {r.currency === 'LKR' && (
+                  <AmountCell
+                    label="Income for the year"
+                    hint="Rupee amount at the CBSL rate"
+                    value={r.gross}
+                    error={f.errors[`${r.key}.gross`]}
+                    onChange={(v) => f.updateBusiness(r.key, { gross: v })}
+                  />
+                )}
                 <AmountCell
                   label="Expenses"
                   hint="Costs of doing this work"

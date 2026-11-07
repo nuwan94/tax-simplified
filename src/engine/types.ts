@@ -44,6 +44,8 @@ export interface BusinessInput {
    * Foreign: tax paid abroad (foreign tax credit, limited and non-refundable).
    */
   taxDeducted: number;
+  /** When `gross` was converted from a foreign currency: the original amount and how it was converted. */
+  foreign?: { currency: string; amount: number; basis: 'cbsl-monthly-average' };
   source: Source;
 }
 

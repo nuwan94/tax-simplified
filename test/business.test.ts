@@ -40,7 +40,10 @@ describe('IRD guide Example 2 (Mr Chathura: local + foreign lecturing)', () => {
     const normal = r.bands.filter((b) => b.kind === 'normal').map((b) => b.tax);
     assert.deepEqual(normal, [60_000, 90_000, 120_000, 150_000, 252_000]);
     const foreign = r.bands.filter((b) => b.kind === 'foreign');
-    assert.deepEqual(foreign.map((b) => [b.amount, b.rate, b.tax]), [[9_000_000, 0.15, 1_350_000]]);
+    assert.deepEqual(
+      foreign.map((b) => [b.amount, b.rate, b.tax]),
+      [[9_000_000, 0.15, 1_350_000]],
+    );
     assert.equal(r.tax, 2_022_000);
     assert.equal(r.credits.foreignTaxCredit, 1_350_000);
     assert.equal(r.credits.serviceWht, 250_000);
@@ -73,10 +76,7 @@ describe('salary + freelance USD income', () => {
   });
 
   it('expenses are deducted from business income', () => {
-    const r = calculate(
-      { ...input(salary()), businesses: [biz('foreign', 3_500_000, { expenses: 500_000 })] },
-      rules,
-    );
+    const r = calculate({ ...input(salary()), businesses: [biz('foreign', 3_500_000, { expenses: 500_000 })] }, rules);
     assert.equal(r.businessIncome, 3_000_000);
     assert.equal(r.balance, 450_000);
     assert.match(r.trace.find((t) => t.key === 'business.foreign')!.formula!, /less expenses 500,000/);
@@ -104,14 +104,14 @@ describe('salary + freelance USD income', () => {
   });
 
   it('local freelance income is taxed at normal rates with 5% WHT credited', () => {
-    const r = calculate(
-      { ...input(salary()), businesses: [biz('local', 1_200_000, { taxDeducted: 60_000 })] },
-      rules,
-    );
+    const r = calculate({ ...input(salary()), businesses: [biz('local', 1_200_000, { taxDeducted: 60_000 })] }, rules);
     // 1,200,000 above 1,800,000 taxable: 200,000 × 24% + 500,000 × 30% + 500,000 × 36%
     assert.equal(r.tax, 222_000 + 48_000 + 150_000 + 180_000);
     assert.equal(r.credits.serviceWht, 60_000);
-    assert.equal(r.bands.every((b) => b.kind === 'normal'), true);
+    assert.equal(
+      r.bands.every((b) => b.kind === 'normal'),
+      true,
+    );
   });
 
   it('foreign tax credit is capped at the tax on foreign income', () => {
@@ -124,10 +124,7 @@ describe('salary + freelance USD income', () => {
   });
 
   it('a loss counts as zero and is flagged', () => {
-    const r = calculate(
-      { ...input(salary()), businesses: [biz('local', 100_000, { expenses: 150_000 })] },
-      rules,
-    );
+    const r = calculate({ ...input(salary()), businesses: [biz('local', 100_000, { expenses: 150_000 })] }, rules);
     assert.equal(r.businessIncome, 0);
     assert.ok(r.warnings.some((w) => w.code === 'BUSINESS_LOSS'));
   });
@@ -136,7 +133,10 @@ describe('salary + freelance USD income', () => {
     const r = calculate(
       {
         ...input(salary()),
-        businesses: [biz('local', 500_000, { taxDeducted: 25_000 }), biz('foreign', 2_000_000, { taxDeducted: 100_000 })],
+        businesses: [
+          biz('local', 500_000, { taxDeducted: 25_000 }),
+          biz('foreign', 2_000_000, { taxDeducted: 100_000 }),
+        ],
         instalmentsPaid: 50_000,
       },
       rules,
@@ -151,5 +151,23 @@ describe('salary + freelance USD income', () => {
   it('rejects bad business amounts', () => {
     assert.throws(() => calculate({ ...input([]), businesses: [biz('local', -5)] }, rules), InputError);
     assert.throws(() => calculate({ ...input([]), instalmentsPaid: 1.5 }, rules), InputError);
+  });
+});
+
+describe('foreign income converted from USD', () => {
+  it('shows the USD amount and conversion basis in the working', () => {
+    const r = calculate(
+      {
+        ...input([job(3_600_000, 222_000)]),
+        businesses: [
+          biz('foreign', 3_050_000, { foreign: { currency: 'USD', amount: 10_000, basis: 'cbsl-monthly-average' } }),
+        ],
+      },
+      rules,
+    );
+    assert.match(
+      r.trace.find((t) => t.key === 'business.foreign')!.formula!,
+      /USD 10,000 at CBSL monthly averages = Rs 3,050,000/,
+    );
   });
 });

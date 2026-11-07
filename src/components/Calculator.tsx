@@ -316,7 +316,7 @@ function ResultPanel(props: {
           <p className="empty-title">{hasErrors ? 'Check the highlighted amounts' : 'No figures yet'}</p>
           <p className="muted">
             {hasErrors
-              ? 'Amounts must be whole rupees, for example 1,250,000.'
+              ? 'Rupee amounts must be whole numbers, for example 1,250,000. Dollar amounts can have cents.'
               : 'Enter your salary or bank interest. The computation updates as you type.'}
           </p>
         </div>
