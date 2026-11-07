@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Mono, Source_Serif_4 } from 'next/font/google';
 import './globals.css';
+import './explain.css';
 
 // Paper theme: a book-style serif for reading, a typewriter-ledger mono for figures.
 const serif = Source_Serif_4({

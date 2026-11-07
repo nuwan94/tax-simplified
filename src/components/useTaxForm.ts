@@ -16,6 +16,7 @@ import {
 import { parseAmount } from '@/lib/money';
 import { convertMonthly, getFxRates, parseForeignAmount, yaMonths, type Conversion } from '@/lib/fx';
 import { computeReadiness } from '@/lib/readiness';
+import type { TopicId } from './explainers';
 
 // Shared, design-independent state and logic for every calculator UI.
 
@@ -64,30 +65,31 @@ export interface BusinessRow {
 export const usdRates = getFxRates('USD', YA);
 export const MONTHS = yaMonths(YA);
 
-export const QUESTIONS: { id: keyof Answers; text: string; help?: string }[] = [
+export const QUESTIONS: { id: keyof Answers; text: string; hint: TopicId }[] = [
   {
     id: 'resident',
     text: 'Were you resident in Sri Lanka for the year?',
-    help: 'Usually yes if you were in Sri Lanka for 183 days or more between April 2025 and March 2026.',
+    hint: 'resident',
   },
   {
     id: 'hasOtherIncome',
     text: 'Any income other than salary, bank interest or freelance work?',
-    help: 'Rent, dividends, a salary from a foreign employer, or selling land or shares. Freelance income goes in Part D.',
+    hint: 'otherIncome',
   },
   {
     id: 'hasOtherReliefs',
     text: 'Claiming any relief besides the personal relief?',
-    help: 'Solar panels, donations to the government, or other qualifying payments.',
+    hint: 'reliefs',
   },
   {
     id: 'allEmployersDeductedApit',
     text: 'Did every employer operate APIT (PAYE) on your salary?',
-    help: 'Answer yes if your salary was under Rs 150,000 a month and nothing was deducted because none was due.',
+    hint: 'apit',
   },
   {
     id: 'hasIrdFile',
     text: 'Have you filed before, or has IRD opened a tax file for you?',
+    hint: 'irdFile',
   },
 ];
 

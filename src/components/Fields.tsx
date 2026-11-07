@@ -1,5 +1,8 @@
 // Shared form cells for the ledger-style sections.
 
+import { Hint } from './Hint';
+import type { TopicId } from './explainers';
+
 export function Cell({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="cell" role="cell">
@@ -17,12 +20,14 @@ export function AmountCell(props: {
   onChange: (v: string) => void;
   error?: string;
   hint?: string;
+  topic?: TopicId;
 }) {
-  const { label, value, onChange, error, hint } = props;
+  const { label, value, onChange, error, hint, topic } = props;
   return (
     <div className={`cell num${error ? ' has-error' : ''}`} role="cell">
-      <span className="cell-label" aria-hidden="true">
-        {label}
+      <span className="cell-label">
+        <span aria-hidden="true">{label}</span>
+        {topic && <Hint topic={topic} />}
       </span>
       <span className="amount">
         <span className="amount-prefix" aria-hidden="true">

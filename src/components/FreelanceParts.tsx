@@ -1,6 +1,7 @@
 'use client';
 
 import { AmountCell, Cell } from './Fields';
+import { Hint, WithHint } from './Hint';
 import { PlusIcon, XIcon } from './Icons';
 import { MONTHS, fmt, rules, usdRates, type TaxForm } from './useTaxForm';
 import { monthLabel, type Conversion } from '@/lib/fx';
@@ -63,11 +64,7 @@ function MonthlyUsd(props: {
           = <b className="num">Rs {fmt(conversion?.totalLkr ?? 0)}</b>
         </span>
         <small>
-          Converted at each month&rsquo;s average{' '}
-          <a href={usdRates.source} target="_blank" rel="noreferrer">
-            CBSL USD rate
-          </a>
-          . The law uses the rate on the day you received it, so this is a close estimate.
+          At each month&rsquo;s CBSL average rate <Hint topic="fxMonthly" />
         </small>
       </p>
     </div>
@@ -77,7 +74,6 @@ function MonthlyUsd(props: {
 /** Part D (freelance & foreign income) and Part E (tax already paid). */
 export function FreelanceParts({ f }: { f: TaxForm }) {
   const capPct = Math.round(rules.foreignSourceIncome.maxRate * 100);
-  const whtPct = Math.round(rules.withholding.serviceFeesResident.rate * 100);
   const netOf = (key: string) => f.biz.find((b) => b.id === key);
 
   return (
@@ -85,15 +81,10 @@ export function FreelanceParts({ f }: { f: TaxForm }) {
       <section className="part" aria-labelledby="part-d">
         <header className="part-head">
           <h2 id="part-d">
-            <span className="part-code">Part D</span> Freelance &amp; foreign income
+            <span className="part-code">Part D</span> <WithHint text="Freelance & foreign income" topic="freelance" />
           </h2>
           <span className="part-meta">Schedule 2</span>
         </header>
-        <p className="part-intro">
-          Work you did for yourself: freelancing, consulting, lecturing, online platforms. Add one entry per client or
-          platform. Foreign income received in foreign currency through a Sri Lankan bank is taxed at no more than{' '}
-          {capPct}%.
-        </p>
 
         {f.businessRows.map((r, i) => {
           const parsed = netOf(r.key);
@@ -124,7 +115,9 @@ export function FreelanceParts({ f }: { f: TaxForm }) {
               </Cell>
 
               <fieldset className="inline-q">
-                <legend>Where is the client?</legend>
+                <legend>
+                  <WithHint text="Where is the client?" topic="clientLocation" />
+                </legend>
                 <div className="seg" role="radiogroup" aria-label="Where is the client?">
                   {(['foreign', 'local'] as const).map((o) => (
                     <label key={o} className={r.origin === o ? 'on' : ''}>
@@ -142,11 +135,9 @@ export function FreelanceParts({ f }: { f: TaxForm }) {
 
               {r.origin === 'foreign' && (
                 <fieldset className="inline-q">
-                  <legend>Received in foreign currency through a Sri Lankan bank?</legend>
-                  <p className="q-help">
-                    Yes if it was credited to your account here, for example to a USD account. Money kept in Payoneer,
-                    Wise or a bank abroad counts as no.
-                  </p>
+                  <legend>
+                    <WithHint text="Received in foreign currency through a Sri Lankan bank?" topic="remitted" />
+                  </legend>
                   <div className="seg" role="radiogroup" aria-label="Received through a Sri Lankan bank?">
                     {[true, false].map((v) => (
                       <label key={String(v)} className={r.remitted === v ? 'on' : ''}>
@@ -164,7 +155,9 @@ export function FreelanceParts({ f }: { f: TaxForm }) {
               )}
 
               <fieldset className="inline-q">
-                <legend>Enter the income in</legend>
+                <legend>
+                  <WithHint text="Enter the income in" topic="fxMonthly" />
+                </legend>
                 <div className="seg" role="radiogroup" aria-label="Enter the income in">
                   {(['USD', 'LKR'] as const).map((c) => (
                     <label key={c} className={r.currency === c ? 'on' : ''}>
@@ -194,7 +187,6 @@ export function FreelanceParts({ f }: { f: TaxForm }) {
                 {r.currency === 'LKR' && (
                   <AmountCell
                     label="Income for the year"
-                    hint="Rupee amount at the CBSL rate"
                     value={r.gross}
                     error={f.errors[`${r.key}.gross`]}
                     onChange={(v) => f.updateBusiness(r.key, { gross: v })}
@@ -202,14 +194,14 @@ export function FreelanceParts({ f }: { f: TaxForm }) {
                 )}
                 <AmountCell
                   label="Expenses"
-                  hint="Costs of doing this work"
+                  topic="expenses"
                   value={r.expenses}
                   error={f.errors[`${r.key}.expenses`]}
                   onChange={(v) => f.updateBusiness(r.key, { expenses: v })}
                 />
                 <AmountCell
                   label={r.origin === 'local' ? 'WHT deducted by client' : 'Tax paid abroad'}
-                  hint={r.origin === 'local' ? `${whtPct}% if over Rs 100,000 a month` : 'If any'}
+                  topic={r.origin === 'local' ? 'wht' : 'foreignTax'}
                   value={r.tax}
                   error={f.errors[`${r.key}.tax`]}
                   onChange={(v) => f.updateBusiness(r.key, { tax: v })}
@@ -243,7 +235,7 @@ export function FreelanceParts({ f }: { f: TaxForm }) {
         <div className="single-field">
           <AmountCell
             label="Quarterly instalments paid for 2025/26"
-            hint="Leave blank if you didn't pay any"
+            topic="instalments"
             value={f.instalments}
             error={f.errors.instalments}
             onChange={f.setInstalments}

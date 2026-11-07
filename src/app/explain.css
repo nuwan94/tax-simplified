@@ -1,0 +1,250 @@
+/* ---------- "?" hint marks and the explainer popup ---------- */
+
+.hint {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 4px;
+  padding: 0;
+  vertical-align: 2px;
+  border: 1.5px solid var(--primary);
+  border-radius: 50%;
+  background: var(--sheet);
+  color: var(--primary);
+  font: 700 12px/1 var(--font-body);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+/* 44px touch target around the 20px mark */
+.hint::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+.hint:hover {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.cell-label .hint,
+.ledger-header .hint,
+.kv dt .hint {
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+}
+.ledger-header .hint::after,
+.cell-label .hint::after {
+  inset: -13px;
+}
+
+/* the popup: a centred card on desktop, a bottom sheet on phones */
+.explain {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--sheet);
+  color: var(--text);
+  box-shadow: 0 24px 60px -20px rgb(40 30 10 / 0.45);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.explain[open] {
+  animation: explain-in 0.22s ease-out;
+}
+.explain::backdrop {
+  background: rgb(42 37 30 / 0.45);
+}
+@keyframes explain-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+html:has(.explain[open]) {
+  overflow: hidden;
+}
+.explain-card {
+  padding: 18px 20px 20px;
+}
+.explain-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.explain-kicker {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.explain h2 {
+  margin: 2px 0 0;
+  font-size: 21px;
+  line-height: 1.25;
+  color: var(--primary);
+}
+.explain-scene {
+  margin: 14px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--sheet-2);
+}
+.explain-scene .scene {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.explain-scene figcaption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  color: var(--muted);
+}
+.link-btn {
+  flex: none;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.explain-body p {
+  margin: 0 0 10px;
+}
+.explain-example,
+.explain-where {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--line-strong);
+  background: var(--sheet-2);
+  font-size: 15px;
+}
+.explain-example {
+  border-left-color: #b07f22;
+}
+.explain-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+@media (max-width: 600px) {
+  .explain {
+    width: 100%;
+    max-width: none;
+    max-height: 88dvh;
+    margin: auto 0 0;
+    border-radius: 12px 12px 0 0;
+    border-bottom: 0;
+  }
+  .explain[open] {
+    animation: explain-up 0.26s ease-out;
+  }
+  .explain-card {
+    padding: 14px 16px 20px;
+  }
+  .explain h2 {
+    font-size: 19px;
+  }
+  .explain-actions .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+}
+@keyframes explain-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* ---------- scene animations ----------
+   Resting state is the finished picture; keyframes only describe the way in. */
+.scene text {
+  font-family: var(--font-body);
+}
+.scene text.mono {
+  font-family: var(--font-figures);
+}
+.scene .a-in {
+  animation: ex-in 0.5s ease-out var(--d, 0s) both;
+}
+.scene .a-from {
+  animation: ex-from 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0s) both;
+}
+.scene .a-grow {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: ex-grow 0.7s ease-out var(--d, 0s) both;
+}
+.scene .a-growy {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: ex-growy 0.6s ease-out var(--d, 0s) both;
+}
+.scene .a-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ex-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) var(--d, 0s) both;
+}
+.scene .a-draw {
+  stroke-dasharray: 1;
+  animation: ex-draw 0.6s ease-in-out var(--d, 0s) both;
+}
+@keyframes ex-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes ex-from {
+  from {
+    opacity: 0;
+    transform: translate(var(--fx, 0), var(--fy, 0));
+  }
+}
+@keyframes ex-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes ex-growy {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes ex-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+@keyframes ex-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@media print {
+  .hint {
+    display: none;
+  }
+}
+
+.nowrap {
+  white-space: nowrap;
+}

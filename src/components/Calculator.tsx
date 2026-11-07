@@ -6,6 +6,7 @@ import { Readiness } from './Readiness';
 import { AmountCell, Cell } from './Fields';
 import { FreelanceParts } from './FreelanceParts';
 import { TaxLadder } from './TaxLadder';
+import { Hint, WithHint } from './Hint';
 import { AlertIcon, CalendarIcon, CheckIcon, InfoIcon, PlusIcon, PrinterIcon, XIcon } from './Icons';
 import {
   OUT_OF_SCOPE_TEXT,
@@ -65,8 +66,9 @@ export function Calculator() {
               <fieldset key={q.id} className="q">
                 <span className="q-no">A{n + 1}</span>
                 <div className="q-text">
-                  <legend>{q.text}</legend>
-                  {q.help && <p className="q-help">{q.help}</p>}
+                  <legend>
+                    <WithHint text={q.text} topic={q.hint} />
+                  </legend>
                 </div>
                 <div className="seg" role="radiogroup" aria-label={q.text}>
                   {[true, false].map((v) => (
@@ -90,11 +92,10 @@ export function Calculator() {
         <section className="part" aria-labelledby="part-b">
           <header className="part-head">
             <h2 id="part-b">
-              <span className="part-code">Part B</span> Employment income
+              <span className="part-code">Part B</span> <WithHint text="Employment income" topic="employment" />
             </h2>
             <span className="part-meta">Schedule 1</span>
           </header>
-          <p className="part-intro">From each employer&rsquo;s annual APIT certificate. Gross amounts, before tax.</p>
           <div className="ledger" role="table" aria-label="Employment income">
             <div className="ledger-row ledger-header" role="row">
               <span role="columnheader">Employer</span>
@@ -102,7 +103,7 @@ export function Calculator() {
                 Gross remuneration
               </span>
               <span role="columnheader" className="num">
-                APIT deducted
+                <WithHint text="APIT deducted" topic="apit" />
               </span>
               <span role="columnheader" aria-label="Actions" />
             </div>
@@ -127,6 +128,7 @@ export function Calculator() {
                 />
                 <AmountCell
                   label="APIT deducted"
+                  topic="apit"
                   value={r.apit}
                   error={errors[`${r.key}.apit`]}
                   onChange={(v) => updEmp(r.key, { apit: v })}
@@ -165,11 +167,10 @@ export function Calculator() {
         <section className="part" aria-labelledby="part-c">
           <header className="part-head">
             <h2 id="part-c">
-              <span className="part-code">Part C</span> Interest income
+              <span className="part-code">Part C</span> <WithHint text="Interest income" topic="interest" />
             </h2>
             <span className="part-meta">Schedules 3 &amp; 7</span>
           </header>
-          <p className="part-intro">From each bank&rsquo;s interest (AIT/WHT) certificate, one line per bank.</p>
           <label className="check">
             <input type="checkbox" checked={noInterest} onChange={(e) => setNoInterest(e.target.checked)} />
             <span>I had no bank interest this year</span>
@@ -183,7 +184,7 @@ export function Calculator() {
                     Gross interest
                   </span>
                   <span role="columnheader" className="num">
-                    AIT / WHT deducted
+                    <WithHint text="AIT / WHT deducted" topic="interest" />
                   </span>
                   <span role="columnheader" aria-label="Actions" />
                 </div>
@@ -207,7 +208,7 @@ export function Calculator() {
                     />
                     <AmountCell
                       label="AIT / WHT deducted"
-                      hint="Usually 10%"
+                      topic="interest"
                       value={r.tax}
                       error={errors[`${r.key}.tax`]}
                       onChange={(v) => updInt(r.key, { tax: v })}
@@ -345,7 +346,9 @@ function ResultPanel(props: {
 
       <dl className="kv">
         <div>
-          <dt>Return</dt>
+          <dt>
+            Return <Hint topic="returnType" />
+          </dt>
           <dd>
             {!allAnswered || !obligation ? (
               <span className="muted">Complete Part A</span>
@@ -361,7 +364,9 @@ function ResultPanel(props: {
           </dd>
         </div>
         <div>
-          <dt>Filing deadline</dt>
+          <dt>
+            Filing deadline <Hint topic="deadlines" />
+          </dt>
           <dd>
             {shortDate(rules.filing.deadline)}
             {filingDays !== null && mustFile && (
@@ -407,7 +412,7 @@ function ResultPanel(props: {
         <Note tone="warn" icon={<CalendarIcon />}>
           Freelance income isn&rsquo;t taxed at source, so IRD expects quarterly instalments (
           {rules.payments.instalments.map((i) => shortDate(i.due).replace(/ \d{4}$/, '')).join(', ')}). A missed
-          instalment adds a 10% penalty.
+          instalment adds a 10% penalty. <Hint topic="instalments" />
         </Note>
       )}
       {result.outcome === 'refund' && (

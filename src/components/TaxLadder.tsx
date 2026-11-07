@@ -1,4 +1,5 @@
 import type { CalculationResult, Rules } from '@/index';
+import { Hint } from './Hint';
 
 /** Sequential ramp: higher rate = darker. Relief and capped foreign income get their own colours. */
 const RATE_CLASS: Record<string, string> = { '0.06': 'b1', '0.18': 'b2', '0.24': 'b3', '0.3': 'b4', '0.36': 'b5' };
@@ -19,7 +20,9 @@ export function TaxLadder({ result, rules }: { result: CalculationResult; rules:
   return (
     <figure className="ladder">
       <figcaption>
-        <span className="ladder-title">Income by tax band</span>
+        <span className="ladder-title">
+          Income by tax band <Hint topic="bands" />
+        </span>
         <span className="ladder-note">
           {result.taxable === 0
             ? `All of your income is within the Rs ${fmt(rules.reliefs.personal.amount)} tax-free allowance.`
