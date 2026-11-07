@@ -1,0 +1,19 @@
+{
+  "name": "tax-simplified",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sri Lankan personal income tax helper: calculation engine and rules",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.8.3"
+  }
+}
