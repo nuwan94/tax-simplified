@@ -23,5 +23,5 @@ export interface Rules {
     interestResident: { rate: number; final: boolean; source: string };
   };
   filing: { deadline: string };
-  payments: { final: { due: string } };
+  payments: { final: { due: string; paymentCode: string } };
 }
