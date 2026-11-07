@@ -34,6 +34,9 @@
       { "upTo": null, "rate": 0.15 }
     ],
     "rule": "Progressive rates, capped at 15%",
+    "maxRate": 0.15,
+    "stacking": "Personal relief is set against local income first (maximum benefit); local income takes the lower bands and foreign income is taxed on the bands above it, at no more than maxRate. Reproduces IRD guide Examples 2, 3 and 6.",
+    "foreignTaxCredit": "Limited to the Sri Lankan tax on the foreign income; non-refundable; cannot be set off against other tax.",
     "cage": "809B",
     "note": "From 1 Apr 2025 such income is taxable; declare under the matching category (employment, business, investment, other).",
     "source": "IRD_GUIDE Annexure 7; Schedule 8 instructions; Special Note p.9"

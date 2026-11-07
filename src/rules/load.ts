@@ -71,6 +71,9 @@ export function validateRules(raw: unknown, ya: string): Rules {
   const wht = r.withholding?.interestResident?.rate;
   if (typeof wht !== 'number' || wht < 0 || wht >= 1) fail('withholding.interestResident.rate must be in [0,1)');
 
+  const fx = r.foreignSourceIncome?.maxRate;
+  if (typeof fx !== 'number' || fx <= 0 || fx >= 1) fail('foreignSourceIncome.maxRate must be in (0,1)');
+
   return r;
 }
 

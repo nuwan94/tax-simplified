@@ -77,3 +77,16 @@ describe('confirmFilingObligation', () => {
     assert.equal(confirmFilingObligation(mustFile, r), mustFile);
   });
 });
+
+describe('freelance income', () => {
+  it('any freelance entry → must file', () => {
+    const e = assessEligibility({ ...salaryOnly, businessCount: 1 });
+    assert.equal(e.status, 'must_file');
+    assert.match(JSON.stringify(e), /not taxed through APIT/);
+  });
+
+  it('freelance-only person gets the freelance reason, not the interest one', () => {
+    const e = assessEligibility({ ...salaryOnly, employerCount: 0, businessCount: 1 });
+    assert.doesNotMatch(JSON.stringify(e), /interest income without employment/);
+  });
+});

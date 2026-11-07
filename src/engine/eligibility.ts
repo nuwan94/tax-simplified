@@ -10,7 +10,7 @@ export const NO_RETURN_INTEREST_LIMIT = 5_000;
 
 export interface EligibilityAnswers {
   resident: boolean;
-  /** Rent, business, freelance, foreign, dividends, sale of property/shares, terminal benefits… */
+  /** Rent, dividends, foreign employment, sale of property/shares, terminal benefits… (freelance is in scope) */
   hasOtherIncome: boolean;
   /** Qualifying payments, solar panels, donations: anything beyond personal relief. */
   hasOtherReliefs: boolean;
@@ -20,6 +20,8 @@ export interface EligibilityAnswers {
   approxInterest: number;
   /** IRD has opened an income tax file for the person (e.g. they filed before). */
   hasIrdFile: boolean;
+  /** Freelance / business income entries (local or foreign). */
+  businessCount?: number;
 }
 
 export type OutOfScopeReason = 'non_resident' | 'other_income' | 'other_reliefs';
@@ -39,7 +41,9 @@ export function assessEligibility(a: EligibilityAnswers): Eligibility {
 
   const reasons: string[] = [];
   if (a.hasIrdFile) reasons.push('IRD has opened a tax file for you, so you must file until it is closed.');
-  if (a.employerCount === 0) reasons.push('You have interest income without employment income under APIT.');
+  const business = (a.businessCount ?? 0) > 0;
+  if (business) reasons.push('You have freelance or business income, which is not taxed through APIT.');
+  if (a.employerCount === 0 && !business) reasons.push('You have interest income without employment income under APIT.');
   if (a.employerCount > 0 && !a.allEmployersDeductedApit) reasons.push('Not all of your employment income had APIT deducted.');
   if (a.approxInterest > NO_RETURN_INTEREST_LIMIT) {
     reasons.push(`Your interest is more than Rs ${NO_RETURN_INTEREST_LIMIT.toLocaleString('en-LK')}.`);
@@ -65,6 +69,7 @@ export function confirmFilingObligation(e: Eligibility, r: CalculationResult): F
   if (e.status !== 'likely_no_return') return e;
 
   const reasons: string[] = [];
+  if (r.returnType === 'standard') reasons.push('You have freelance or business income, which is not taxed through APIT.');
   if (r.interestIncome > NO_RETURN_INTEREST_LIMIT) {
     reasons.push(`Your certificates show interest of Rs ${r.interestIncome.toLocaleString('en-LK')}, above the Rs 5,000 limit.`);
   }

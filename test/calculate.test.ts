@@ -38,7 +38,16 @@ describe('IRD Example 01 working', () => {
     assert.equal(r.taxable, 1_220_000);
     const bands = r.trace.filter((t) => t.key.startsWith('band.')).map((t) => t.amount);
     assert.deepEqual(bands, [60_000, 39_600]);
-    assert.deepEqual(r.credits, { apitPrimary: 74_400, apitSecondary: 0, ait: 14_000, total: 88_400 });
+    assert.deepEqual(r.credits, {
+      apitPrimary: 74_400,
+      apitSecondary: 0,
+      ait: 14_000,
+      serviceWht: 0,
+      foreignTaxCredit: 0,
+      instalments: 0,
+      total: 88_400,
+    });
+    assert.equal(r.returnType, 'simplified');
   });
 
   it('trace balances: lines from assessable onward sum to the balance', () => {

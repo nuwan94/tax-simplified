@@ -19,9 +19,18 @@ export interface Rules {
     bands: Band[];
     source: string;
   };
+  foreignSourceIncome: {
+    /** Highest rate on foreign income received in foreign currency through a licensed bank. */
+    maxRate: number;
+    source: string;
+  };
   withholding: {
     interestResident: { rate: number; final: boolean; source: string };
+    serviceFeesResident: { rate: number; source: string };
   };
   filing: { deadline: string };
-  payments: { final: { due: string; paymentCode: string } };
+  payments: {
+    instalments: { n: number; due: string; paymentCode: string }[];
+    final: { due: string; paymentCode: string };
+  };
 }
