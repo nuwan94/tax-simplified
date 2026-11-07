@@ -1,0 +1,127 @@
+{
+  "yearOfAssessment": "2025/2026",
+  "period": { "from": "2025-04-01", "to": "2026-03-31" },
+  "status": "enacted",
+  "verifiedOn": "2026-11-07",
+  "sources": {
+    "IRD_GUIDE": "https://www.ird.gov.lk/en/Downloads/IT_Individuals_Doc/Asmt_IIT_004_2025_2026_E.pdf",
+    "IRD_CALENDAR_2026": "https://www.ird.gov.lk/en/publications/Tax%20Calendar_Documents/Tax_Calendar_2026_E.pdf",
+    "IRD_NOTICE_2026_02": "https://www.ird.gov.lk/en/Lists/Latest%20News%20%20Notices/Attachments/788/SEC_PN_IT_2026-02.pdf"
+  },
+
+  "reliefs": {
+    "personal": { "amount": 1800000, "note": "Up to aggregate assessable income, excluding gains on investment assets. Also available to non-resident citizens.", "source": "IRD_GUIDE Annexure 1(a); Fifth Schedule para 2(a)" },
+    "rent": { "rate": 0.25, "of": "total rental income", "cage": "316 -> 60", "source": "IRD_GUIDE Annexure 1(b)" },
+    "solarPanels": { "maxPerYear": 600000, "note": "Resident, grid-connected, own premises; capped at expenditure or loan repayments.", "schedule": "5C", "source": "IRD_GUIDE Annexure 1(c)" }
+  },
+
+  "progressiveRates": {
+    "appliesTo": "taxable income (after reliefs)",
+    "bands": [
+      { "upTo": 1000000, "rate": 0.06 },
+      { "upTo": 1500000, "rate": 0.18 },
+      { "upTo": 2000000, "rate": 0.24 },
+      { "upTo": 2500000, "rate": 0.30 },
+      { "upTo": null, "rate": 0.36 }
+    ],
+    "source": "IRD_GUIDE Annexure 7"
+  },
+
+  "foreignSourceIncome": {
+    "condition": "Foreign-source / foreign service income received in foreign currency and remitted to Sri Lanka through a licensed bank",
+    "bands": [
+      { "upTo": 1000000, "rate": 0.06 },
+      { "upTo": null, "rate": 0.15 }
+    ],
+    "rule": "Progressive rates, capped at 15%",
+    "cage": "809B",
+    "note": "From 1 Apr 2025 such income is taxable; declare under the matching category (employment, business, investment, other).",
+    "source": "IRD_GUIDE Annexure 7; Schedule 8 instructions; Special Note p.9"
+  },
+
+  "terminalBenefits": {
+    "bands": [
+      { "upTo": 10000000, "rate": 0.0 },
+      { "upTo": 20000000, "rate": 0.06 },
+      { "upTo": null, "rate": 0.12 }
+    ],
+    "source": "IRD_GUIDE Annexure 6"
+  },
+
+  "withholding": {
+    "interestResident": { "rate": 0.10, "final": false, "creditSchedule": "7", "note": "Creditable against tax; the guide's Example 01 deducts it as a credit.", "source": "IRD_GUIDE Annexure 4(f), Example 01" },
+    "interestNonResident": { "rate": 0.10, "final": true, "source": "IRD_GUIDE Annexure 4(c)" },
+    "dividend": { "rate": 0.15, "final": true, "schedule": "6", "source": "IRD_GUIDE Annexure 4(j)" },
+    "serviceFeesResident": { "rate": 0.05, "threshold": "Rs 100,000 per calendar month", "note": "List of professions extended from 2026-06-03.", "source": "IRD_GUIDE Annexure 4(e); IRD_NOTICE_2026_02 s.10.3" },
+    "rentResident": { "rate": 0.10, "threshold": "Rs 100,000 per calendar month", "source": "IRD_GUIDE Annexure 4(g)" },
+    "interestSelfDeclaration": { "who": "Resident individuals with no taxable income for the year", "penaltyForFalse": 200000, "effective": "2025-04-01", "source": "IRD_NOTICE_2026_02 s.10.2" }
+  },
+
+  "capitalGains": {
+    "individualRate": 0.10,
+    "note": "Rate rises to 15% for realisations from 2026-06-03 (falls in YA 2026/27).",
+    "source": "IRD_NOTICE_2026_02 s.20"
+  },
+
+  "filing": {
+    "deadline": "2026-11-30",
+    "method": "e-filing mandatory; senior citizens may file on paper from YA 2025/26",
+    "simplifiedReturn": "Available to e-filers with only employment and interest income",
+    "noReturnNeeded": "Only income is employment income fully subject to APIT (plus interest <= Rs 5,000), with no instalment or final payment due — unless the CGIR has opened a file.",
+    "taxTypeCode": "05 (Individual Income Tax)",
+    "source": "IRD_GUIDE p.2-4; IRD_NOTICE_2026_02 s.12; IRD_CALENDAR_2026"
+  },
+
+  "payments": {
+    "instalments": [
+      { "n": 1, "due": "2025-08-15", "paymentCode": "25261" },
+      { "n": 2, "due": "2025-11-15", "paymentCode": "25262" },
+      { "n": 3, "due": "2026-02-15", "paymentCode": "25263" },
+      { "n": 4, "due": "2026-05-15", "paymentCode": "25264" }
+    ],
+    "final": { "due": "2026-09-30", "paymentCode": "25260" },
+    "source": "IRD_GUIDE s.8; IRD_CALENDAR_2026"
+  },
+
+  "penalties": {
+    "lateReturn": "Greater of (5% of tax owing + 1% per month) or (Rs 50,000 + Rs 10,000 per month after 2026-11-30)",
+    "falseStatement": "Greater of Rs 50,000 or the tax understated / refund overstated",
+    "nonFiling": "Fine up to Rs 1,000,000 and/or up to 1 year imprisonment",
+    "missedInstalment": 0.10,
+    "unpaidTax": 0.20,
+    "interestPerMonth": 0.015,
+    "source": "IRD_GUIDE s.9"
+  },
+
+  "employerAndBankDeadlines": {
+    "aitWhtAnnualStatement": "2026-04-30",
+    "apitAnnualStatement": "2026-04-30",
+    "note": "Certificates must be issued free of charge (IRD_NOTICE_2026_02 s.10.5).",
+    "source": "IRD_CALENDAR_2026 (April)"
+  },
+
+  "timeLimitedOffers": {
+    "interestWaiver": {
+      "covers": "Interest on late/under-payments up to YA 2024/2025",
+      "condition": "Principal tax paid in full by 2026-12-02 (or already settled)",
+      "source": "IRD_NOTICE_2026_02 s.22"
+    }
+  },
+
+  "returnMap": {
+    "schedules": {
+      "1": "Employment Income -> cage 10",
+      "2": "Business Income -> cage 20",
+      "3": "Investment Income (interest, rent, capital gains, dividends) -> cage 30",
+      "4": "Other Income / Foreign Currency Remitted -> cage 40",
+      "5": "Qualifying Payments & Expenditure Relief (5A-5E) -> cage 100",
+      "6": "WHT on Final Withholding Payments",
+      "7": "AIT / WHT credits",
+      "8": "Tax Calculation -> cage 150",
+      "9": "Tax Credits (APIT primary/secondary, AIT)",
+      "10": "Loss Adjustment"
+    },
+    "keyCages": { "assessableIncome": "50", "rentRelief": "60", "exemptIncome": "210", "foreignRemitted": "210A" },
+    "source": "IRD_GUIDE Part B and schedule instructions"
+  }
+}
