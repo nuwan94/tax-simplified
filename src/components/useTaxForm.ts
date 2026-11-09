@@ -13,7 +13,8 @@ import {
   type InterestInput,
   type OutOfScopeReason,
 } from '@/index';
-import { parseAmount } from '@/lib/money';
+import { parseAmount, parseCents } from '@/lib/money';
+import { peggedSplit, summarizeMonths, type PayMonth } from '@/lib/payslips';
 import { convertMonthly, getFxRates, parseForeignAmount, yaMonths, type Conversion } from '@/lib/fx';
 import { computeReadiness } from '@/lib/readiness';
 import { addableSections, visibleSections, type ProfileId, type Section } from '@/lib/profiles';
@@ -34,11 +35,60 @@ export interface Answers {
   hasIrdFile: YesNo;
 }
 
+/** One month of a payslip. Blank fields are worked out where possible. */
+export interface PayRow {
+  usd: string;
+  basic: string;
+  allowance: string;
+  regular: string;
+  extra: string;
+  apit: string;
+}
+
 export interface EmployerRow {
   key: string;
   name: string;
+  /** What the person has in hand: the yearly T-10 certificate, or monthly payslips. */
+  source: 't10' | 'payslips';
+  // T-10: yearly totals
   gross: string;
   apit: string;
+  // payslips
+  pegged: boolean;
+  /** Rupees per US dollar used for the basic salary (often 200). */
+  peg: string;
+  /** Usual month: US dollars when pegged, otherwise rupees. Used by "Fill all months". */
+  usual: string;
+  months: Record<string, PayRow>;
+}
+
+export const emptyPayRow = (): PayRow => ({ usd: '', basic: '', allowance: '', regular: '', extra: '', apit: '' });
+
+export const newEmployerRow = (key: string, source: EmployerRow['source'] = 'payslips'): EmployerRow => ({
+  key,
+  name: '',
+  source,
+  gross: '',
+  apit: '',
+  pegged: false,
+  peg: '200',
+  usual: '',
+  months: {},
+});
+
+export type PaySummary = ReturnType<typeof summarizeMonths>;
+
+/** Everything needed to restore the form for one person. */
+export interface SavedForm {
+  v: 1;
+  profile: ProfileId | null;
+  extra: Section[];
+  answers: Answers;
+  employers: EmployerRow[];
+  interests: InterestRow[];
+  businessRows: BusinessRow[];
+  instalments: string;
+  noInterest: boolean;
 }
 
 export interface InterestRow {
@@ -140,17 +190,59 @@ function parseRows(
   };
   const filled = (...xs: string[]) => xs.some((x) => x.trim() !== '');
 
+  const cents = (key: string, raw: string): number | undefined => {
+    const p = parseCents(raw);
+    if ('error' in p) {
+      errors[key] = p.error;
+      return undefined;
+    }
+    return 'empty' in p ? undefined : p.value;
+  };
+
+  // Payslips: add up the months, working out blanks (pegged split, APIT from the tables).
+  const payslips: Record<string, PaySummary> = {};
+  employers.forEach((r, i) => {
+    if (r.source !== 'payslips') return;
+    const peg = r.pegged ? (cents(`${r.key}.peg`, r.peg) ?? 0) : 0;
+    const months: PayMonth[] = [];
+    for (const m of MONTHS) {
+      const row = r.months[m];
+      if (!row || !filled(...Object.values(row))) continue;
+      const k = (f: string) => `${r.key}.p.${m}.${f}`;
+      const extra = cents(k('extra'), row.extra) ?? 0;
+      const apit = cents(k('apit'), row.apit);
+      let regular = 0;
+      let regularEstimated = false;
+      if (r.pegged) {
+        const usd = cents(k('usd'), row.usd) ?? 0;
+        const auto = peggedSplit(usd, peg, usdRates.monthly[m]?.average ?? peg);
+        const basic = cents(k('basic'), row.basic) ?? auto.basic;
+        const allowance = cents(k('allowance'), row.allowance);
+        regularEstimated = allowance === undefined && auto.allowance > 0;
+        regular = basic + (allowance ?? auto.allowance);
+      } else {
+        regular = cents(k('regular'), row.regular) ?? 0;
+      }
+      months.push({ month: m, regular, extra, apit, regularEstimated });
+    }
+    // APIT can only be estimated for the main job; other employers use different tables.
+    payslips[r.key] = summarizeMonths(months, payRules, i === 0);
+  });
+
   const emp: EmploymentInput[] = employers
     .map((r, i) => ({ r, i }))
-    .filter(({ r }) => filled(r.gross, r.apit))
-    .map(({ r, i }) => ({
-      id: r.key,
-      employerName: r.name.trim() || `Employer ${i + 1}`,
-      isPrimary: i === 0,
-      gross: num(`${r.key}.gross`, r.gross),
-      apit: num(`${r.key}.apit`, r.apit),
-      source: { method: 'manual' as const },
-    }));
+    .filter(({ r }) => (r.source === 'payslips' ? (payslips[r.key]?.rows.length ?? 0) > 0 : filled(r.gross, r.apit)))
+    .map(({ r, i }) => {
+      const p = payslips[r.key];
+      return {
+        id: r.key,
+        employerName: r.name.trim() || `Employer ${i + 1}`,
+        isPrimary: i === 0,
+        gross: p ? Math.round(p.gross) : num(`${r.key}.gross`, r.gross),
+        apit: p ? Math.round(p.apit) : num(`${r.key}.apit`, r.apit),
+        source: { method: 'manual' as const },
+      };
+    });
 
   const int: InterestInput[] = interests
     .map((r, i) => ({ r, i }))
@@ -202,7 +294,7 @@ function parseRows(
 
   const instalmentsPaid = num('instalments', instalments);
 
-  return { emp, int, biz, instalmentsPaid, conversions, errors };
+  return { emp, int, biz, instalmentsPaid, conversions, payslips, errors };
 }
 
 export const newBusinessRow = (key: string): BusinessRow => ({
@@ -217,23 +309,52 @@ export const newBusinessRow = (key: string): BusinessRow => ({
   tax: '',
 });
 
-export function useTaxForm() {
-  const [answers, setAnswers] = useState<Answers>({
-    resident: null,
-    hasOtherIncome: null,
-    hasOtherReliefs: null,
-    allEmployersDeductedApit: null,
-    hasIrdFile: null,
-  });
-  const [employers, setEmployers] = useState<EmployerRow[]>([{ key: 'e1', name: '', gross: '', apit: '' }]);
-  const [interests, setInterests] = useState<InterestRow[]>([{ key: 'i1', name: '', gross: '', tax: '' }]);
-  const [businessRows, setBusinessRows] = useState<BusinessRow[]>([]);
-  const [instalments, setInstalments] = useState('');
-  const nextId = useRef(2);
+export const payRules = { relief: rules.reliefs.personal.amount, bands: rules.progressiveRates.bands };
+
+const BLANK_ANSWERS: Answers = {
+  resident: null,
+  hasOtherIncome: null,
+  hasOtherReliefs: null,
+  allEmployersDeductedApit: null,
+  hasIrdFile: null,
+};
+
+/** Accepts saved data from any earlier version; anything unrecognised falls back to a blank form. */
+function restore(raw: unknown): SavedForm {
+  const d = (raw && typeof raw === 'object' ? raw : {}) as Partial<SavedForm>;
+  const employers = Array.isArray(d.employers) && d.employers.length ? d.employers : [newEmployerRow('e1')];
+  return {
+    v: 1,
+    profile: d.profile ?? null,
+    extra: Array.isArray(d.extra) ? d.extra : [],
+    answers: { ...BLANK_ANSWERS, ...(d.answers ?? {}) },
+    employers: employers.map((e) => ({ ...newEmployerRow(e.key, e.gross || e.apit ? 't10' : 'payslips'), ...e })),
+    interests:
+      Array.isArray(d.interests) && d.interests.length ? d.interests : [{ key: 'i1', name: '', gross: '', tax: '' }],
+    businessRows: Array.isArray(d.businessRows) ? d.businessRows.map((b) => ({ ...newBusinessRow(b.key), ...b })) : [],
+    instalments: d.instalments ?? '',
+    noInterest: !!d.noInterest,
+  };
+}
+
+/** Next free number for row keys like "e3", "b12". */
+function nextKeyNumber(f: SavedForm): number {
+  const keys = [...f.employers, ...f.interests, ...f.businessRows].map((x) => Number(x.key.replace(/^\D+/, '')) || 0);
+  return Math.max(1, ...keys) + 1;
+}
+
+export function useTaxForm(initial?: unknown, onSave?: (data: SavedForm) => void) {
+  const [init] = useState(() => restore(initial));
+  const [answers, setAnswers] = useState<Answers>(init.answers);
+  const [employers, setEmployers] = useState<EmployerRow[]>(init.employers);
+  const [interests, setInterests] = useState<InterestRow[]>(init.interests);
+  const [businessRows, setBusinessRows] = useState<BusinessRow[]>(init.businessRows);
+  const [instalments, setInstalments] = useState(init.instalments);
+  const nextId = useRef(nextKeyNumber(init));
 
   // Profile: which sections are on the page. Hidden sections are left out of the calculation.
-  const [profile, setProfileState] = useState<ProfileId | null>(null);
-  const [extra, setExtra] = useState<Section[]>([]);
+  const [profile, setProfileState] = useState<ProfileId | null>(init.profile);
+  const [extra, setExtra] = useState<Section[]>(init.extra);
   const sections = visibleSections(profile, extra);
   const has = (x: Section) => sections.includes(x);
 
@@ -245,7 +366,7 @@ export function useTaxForm() {
   const showInterest = has('interest');
   const showFreelance = has('freelance');
   const showPaid = has('paid');
-  const { emp, int, biz, instalmentsPaid, conversions, errors } = useMemo(
+  const { emp, int, biz, instalmentsPaid, conversions, payslips, errors } = useMemo(
     () =>
       parseRows(
         showSalary ? employers : [],
@@ -288,11 +409,40 @@ export function useTaxForm() {
   const newKey = (prefix: string) => `${prefix}${nextId.current++}`;
 
   // "I had no bank interest": an explicit answer, so readiness can tell "none" from "not entered yet".
-  const [noInterest, setNoInterestState] = useState(false);
+  const [noInterest, setNoInterestState] = useState(init.noInterest);
   const setNoInterest = (on: boolean) => {
     setNoInterestState(on);
     if (on) setInterests([{ key: newKey('i'), name: '', gross: '', tax: '' }]);
   };
+
+  // Save after each change (debounced). Skips the first render, which is the restored state.
+  const saveRef = useRef(onSave);
+  saveRef.current = onSave;
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const t = setTimeout(
+      () =>
+        saveRef.current?.({
+          v: 1,
+          profile,
+          extra,
+          answers,
+          employers,
+          interests,
+          businessRows,
+          instalments,
+          noInterest,
+        }),
+      400,
+    );
+    return () => clearTimeout(t);
+  }, [profile, extra, answers, employers, interests, businessRows, instalments, noInterest]);
+
+  const apitEstimatedMonths = Object.values(payslips).reduce((n, p) => n + p.estimatedApitMonths, 0);
 
   const readiness = computeReadiness({
     // picking a profile counts as the first answer
@@ -333,7 +483,48 @@ export function useTaxForm() {
     employers,
     updateEmployer: (key: string, patch: Partial<EmployerRow>) =>
       setEmployers((rs) => rs.map((x) => (x.key === key ? { ...x, ...patch } : x))),
-    addEmployer: () => setEmployers((rs) => [...rs, { key: newKey('e'), name: '', gross: '', apit: '' }]),
+    addEmployer: () => setEmployers((rs) => [...rs, newEmployerRow(newKey('e'))]),
+    /** Update one month's payslip fields. */
+    updatePayMonth: (key: string, month: string, patch: Partial<PayRow>) =>
+      setEmployers((rs) =>
+        rs.map((x) =>
+          x.key === key
+            ? { ...x, months: { ...x.months, [month]: { ...emptyPayRow(), ...x.months[month], ...patch } } }
+            : x,
+        ),
+      ),
+    /** Copy one month's regular pay into later months that have no regular pay yet. */
+    copyPayDown: (key: string, month: string) =>
+      setEmployers((rs) =>
+        rs.map((x) => {
+          if (x.key !== key) return x;
+          const src = x.months[month];
+          if (!src) return x;
+          const months = { ...x.months };
+          for (const m of MONTHS.filter((m) => m > month)) {
+            const cur = { ...emptyPayRow(), ...months[m] };
+            if (x.pegged ? cur.usd || cur.basic : cur.regular) continue;
+            months[m] = x.pegged
+              ? { ...cur, usd: src.usd, basic: src.basic, allowance: '' }
+              : { ...cur, regular: src.regular };
+          }
+          return { ...x, months };
+        }),
+      ),
+    /** Put the usual monthly amount into every month that is still empty. */
+    fillAllMonths: (key: string) =>
+      setEmployers((rs) =>
+        rs.map((x) => {
+          if (x.key !== key || !x.usual.trim()) return x;
+          const months = { ...x.months };
+          for (const m of MONTHS) {
+            const cur = { ...emptyPayRow(), ...months[m] };
+            if (x.pegged ? cur.usd || cur.basic : cur.regular) continue;
+            months[m] = x.pegged ? { ...cur, usd: x.usual } : { ...cur, regular: x.usual };
+          }
+          return { ...x, months };
+        }),
+      ),
     removeEmployer: (key: string) => setEmployers((rs) => rs.filter((x) => x.key !== key)),
 
     interests,
@@ -358,6 +549,8 @@ export function useTaxForm() {
     int,
     biz,
     conversions,
+    payslips,
+    apitEstimatedMonths,
     errors,
     hasErrors,
     result,

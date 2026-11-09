@@ -1,4 +1,4 @@
-import { Calculator } from '@/components/Calculator';
+import { TaxApp } from '@/components/TaxApp';
 import { LockIcon } from '@/components/Icons';
 export default function Home() {
   return (
@@ -52,12 +52,13 @@ export default function Home() {
         <p className="notice-local">
           <LockIcon />
           <span>
-            Your figures stay on this device. Nothing is sent or stored, and you will never be asked for a RAMIS or bank
-            password.
+            Your figures are saved only in this browser, on this device. Nothing is sent anywhere, and you will never be
+            asked for a RAMIS or bank password. On a shared computer, delete a person&rsquo;s figures when you&rsquo;re
+            done.
           </span>
         </p>
 
-        <Calculator />
+        <TaxApp />
       </main>
 
       <footer className="site-footer">

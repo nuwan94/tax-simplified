@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatLKR, formatSigned, parseAmount } from '../src/lib/money.ts';
+import { formatLKR, formatSigned, parseAmount, parseCents } from '../src/lib/money.ts';
 
 describe('parseAmount', () => {
   it('accepts common ways of typing rupees', () => {
@@ -25,5 +25,17 @@ describe('formatting', () => {
     assert.equal(formatLKR(-30_000), 'Rs 30,000');
     assert.equal(formatSigned(-1_800_000), '(1,800,000)');
     assert.equal(formatSigned(99_600), '99,600');
+  });
+});
+
+describe('parseCents', () => {
+  it('accepts payslip amounts with cents', () => {
+    assert.deepEqual(parseCents('250,000.00'), { value: 250000 });
+    assert.deepEqual(parseCents('Rs 1,250.5'), { value: 1250.5 });
+    assert.deepEqual(parseCents(' '), { empty: true });
+  });
+  it('rejects text and more than 2 decimals', () => {
+    assert.ok('error' in parseCents('1.234'));
+    assert.ok('error' in parseCents('abc'));
   });
 });

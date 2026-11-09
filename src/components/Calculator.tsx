@@ -6,29 +6,35 @@ import { Readiness } from './Readiness';
 import { AmountCell, Cell, SectionHead } from './Fields';
 import { FreelanceSection, PaidSection } from './FreelanceParts';
 import { ProfilePicker, SomethingElse } from './Profiles';
+import { SalarySection } from './SalarySection';
 import type { Section } from '@/lib/profiles';
 import { TaxLadder } from './TaxLadder';
 import { Hint, WithHint } from './Hint';
 import { AlertIcon, CalendarIcon, CheckIcon, InfoIcon, PlusIcon, PrinterIcon, XIcon } from './Icons';
-import { OUT_OF_SCOPE_TEXT, daysUntil, fmt, headlineLabel, rules, shortDate, sum, useTaxForm } from './useTaxForm';
+import {
+  OUT_OF_SCOPE_TEXT,
+  daysUntil,
+  fmt,
+  headlineLabel,
+  rules,
+  shortDate,
+  sum,
+  useTaxForm,
+  type SavedForm,
+} from './useTaxForm';
 
-export function Calculator() {
-  const form = useTaxForm();
+export function Calculator({ initial, onSave }: { initial?: unknown; onSave?: (data: SavedForm) => void } = {}) {
+  const form = useTaxForm(initial, onSave);
   const {
     answers,
     setAnswer,
     answeredCount,
     allAnswered,
     questions,
-    employers,
-    updateEmployer: updEmp,
-    addEmployer,
-    removeEmployer,
     interests,
     updateInterest: updInt,
     addInterest,
     removeInterest,
-    emp,
     int,
     errors,
     hasErrors,
@@ -43,79 +49,6 @@ export function Calculator() {
     sections,
   } = form;
   const removeIf = (s: Section) => (form.isExtra(s) ? () => form.removeSection(s) : undefined);
-
-  const salary = (
-    <section key="salary" className="part" aria-labelledby="sec-salary">
-      <SectionHead id="sec-salary" title="Salary" topic="employment" meta="Schedule 1" onRemove={removeIf('salary')} />
-      <div className="ledger" role="table" aria-label="Employment income">
-        <div className="ledger-row ledger-header" role="row">
-          <span role="columnheader">Employer</span>
-          <span role="columnheader" className="num">
-            Gross remuneration
-          </span>
-          <span role="columnheader" className="num">
-            <WithHint text="APIT deducted" topic="apit" />
-          </span>
-          <span role="columnheader" aria-label="Actions" />
-        </div>
-        {employers.map((r, i) => (
-          <div key={r.key} className="ledger-row" role="row">
-            <Cell label="Employer">
-              <input
-                type="text"
-                autoComplete="off"
-                placeholder={i === 0 ? 'Main employer' : 'Second employer'}
-                value={r.name}
-                onChange={(e) => updEmp(r.key, { name: e.target.value })}
-                aria-label={`Employer ${i + 1} name`}
-              />
-              <span className="tag-line">{i === 0 ? 'Primary employment' : 'Secondary employment'}</span>
-            </Cell>
-            <AmountCell
-              label="Gross remuneration"
-              value={r.gross}
-              error={errors[`${r.key}.gross`]}
-              onChange={(v) => updEmp(r.key, { gross: v })}
-            />
-            <AmountCell
-              label="APIT deducted"
-              topic="apit"
-              value={r.apit}
-              error={errors[`${r.key}.apit`]}
-              onChange={(v) => updEmp(r.key, { apit: v })}
-            />
-            <span className="ledger-actions" role="cell">
-              {i > 0 && (
-                <button
-                  type="button"
-                  className="icon-btn"
-                  aria-label={`Remove employer ${i + 1}`}
-                  onClick={() => removeEmployer(r.key)}
-                >
-                  <XIcon />
-                </button>
-              )}
-            </span>
-          </div>
-        ))}
-        {employers.length > 1 && (
-          <div className="ledger-row ledger-total" role="row">
-            <span role="cell">Total</span>
-            <span role="cell" className="num">
-              {fmt(sum(emp.map((e) => e.gross)))}
-            </span>
-            <span role="cell" className="num">
-              {fmt(sum(emp.map((e) => e.apit)))}
-            </span>
-            <span role="cell" />
-          </div>
-        )}
-      </div>
-      <button type="button" className="btn-secondary" onClick={addEmployer}>
-        <PlusIcon /> Add employer
-      </button>
-    </section>
-  );
 
   const interest = (
     <section key="interest" className="part" aria-labelledby="sec-interest">
@@ -204,7 +137,7 @@ export function Calculator() {
   );
 
   const block: Record<Section, React.ReactNode> = {
-    salary,
+    salary: <SalarySection key="salary" f={form} onRemove={removeIf('salary')} />,
     interest,
     freelance: <FreelanceSection key="freelance" f={form} />,
     paid: <PaidSection key="paid" f={form} />,
@@ -263,6 +196,7 @@ export function Calculator() {
             allAnswered={allAnswered}
             hasErrors={hasErrors}
             hasProfile={!!profile}
+            apitEstimatedMonths={form.apitEstimatedMonths}
             today={today}
           />
         </div>
@@ -288,9 +222,10 @@ function ResultPanel(props: {
   allAnswered: boolean;
   hasErrors: boolean;
   hasProfile: boolean;
+  apitEstimatedMonths: number;
   today: Date | null;
 }) {
-  const { result, obligation, allAnswered, hasErrors, hasProfile, today } = props;
+  const { result, obligation, allAnswered, hasErrors, hasProfile, apitEstimatedMonths, today } = props;
 
   if (obligation?.status === 'out_of_scope') {
     return (
@@ -423,6 +358,12 @@ function ResultPanel(props: {
           Freelance income isn&rsquo;t taxed at source, so IRD expects quarterly instalments (
           {rules.payments.instalments.map((i) => shortDate(i.due).replace(/ \d{4}$/, '')).join(', ')}). A missed
           instalment adds a 10% penalty. <Hint topic="instalments" />
+        </Note>
+      )}
+      {apitEstimatedMonths > 0 && (
+        <Note tone="warn" icon={<InfoIcon />}>
+          APIT for {apitEstimatedMonths} {apitEstimatedMonths === 1 ? 'month' : 'months'} is worked out from the APIT
+          tables, not taken from a payslip. Check it against your payslips or T-10.
         </Note>
       )}
       {result.outcome === 'refund' && (

@@ -938,6 +938,123 @@ function DeadlinesScene() {
   );
 }
 
+function PayslipsScene() {
+  return (
+    <Scene>
+      {Array.from({ length: 6 }, (_, i) => (
+        <rect
+          key={i}
+          x={18 + i * 6}
+          y={22 + i * 6}
+          width={80}
+          height={92}
+          rx={3}
+          fill={SHEET}
+          stroke={LINE}
+          className="a-from"
+          style={v(0.1 + i * 0.12, -30, 0)}
+        />
+      ))}
+      <T x={88} y={130} anchor="middle" size={10.5} bold>
+        12 payslips
+      </T>
+      <T x={58} y={72} size={10} cls="a-in" d={0.9}>
+        Gross
+      </T>
+      <T x={58} y={86} size={10} color={OWE} cls="a-in" d={0.9}>
+        APIT
+      </T>
+      <Arrow x1={130} y1={70} x2={186} y2={70} d={1.1} />
+      <T x={158} y={60} anchor="middle" size={9.5} color={MUTED} cls="a-in" d={1.2}>
+        added up
+      </T>
+      <Doc x={196} y={22} w={110} h={92} title="T-10 certificate" lines={2} cls="a-in" style={v(1.5)} />
+      <T x={204} y={84} size={10} cls="a-in" d={1.7}>
+        Year total
+      </T>
+      <T x={204} y={98} size={10} color={OWE} cls="a-in" d={1.8}>
+        APIT for the year
+      </T>
+      <T x={251} y={130} anchor="middle" size={10.5} bold cls="a-in" d={1.9}>
+        Same answer
+      </T>
+    </Scene>
+  );
+}
+
+function PeggedScene() {
+  return (
+    <Scene>
+      <Coin cx={40} cy={64} r={26} fill={GOLD} text="$2,000" cls="a-pop" style={v(0)} />
+      <T x={40} y={108} anchor="middle" size={10} color={MUTED}>
+        salary in dollars
+      </T>
+      <Arrow x1={70} y1={52} x2={104} y2={40} color={PRI} d={0.4} />
+      <Arrow x1={70} y1={76} x2={104} y2={92} color={GOLD} d={0.8} />
+      <rect x={110} y={24} width={130} height={30} rx={3} fill={PRI_L} stroke={PRI} className="a-grow" style={v(0.6)} />
+      <T x={116} y={44} size={10.5} bold color={PRI} cls="a-in" d={0.9}>
+        Basic: × 200 peg
+      </T>
+      <T x={300} y={44} size={11} anchor="end" mono cls="a-in" d={1}>
+        400,000
+      </T>
+      <rect x={110} y={76} width={66} height={30} rx={3} fill={GOLD_L} stroke={GOLD} className="a-grow" style={v(1)} />
+      <T x={116} y={96} size={10.5} bold color={GOLD} cls="a-in" d={1.3}>
+        Allowance: × 100 more
+      </T>
+      <T x={300} y={96} size={11} anchor="end" mono cls="a-in" d={1.4}>
+        200,000
+      </T>
+      <path d="M110,120 H304" stroke={INK} strokeWidth={1} className="a-in" style={v(1.7)} />
+      <T x={116} y={138} size={11} bold cls="a-in" d={1.8}>
+        Taxed on both
+      </T>
+      <T x={300} y={138} size={11.5} anchor="end" mono bold cls="a-in" d={1.9}>
+        600,000
+      </T>
+    </Scene>
+  );
+}
+
+function BonusScene() {
+  const months = 'AMJJASONDJFM'.split('');
+  return (
+    <Scene>
+      {months.map((m, i) => {
+        const bonus = i === 5;
+        return (
+          <g key={i}>
+            <rect
+              x={20 + i * 24}
+              y={70}
+              width={18}
+              height={40}
+              fill={PRI_L}
+              className="a-growy"
+              style={v(0.1 + i * 0.05)}
+            />
+            {bonus && (
+              <rect x={20 + i * 24} y={14} width={18} height={56} fill={GOLD} className="a-growy" style={v(1)} />
+            )}
+            <T x={29 + i * 24} y={124} anchor="middle" size={9.5} color={bonus ? GOLD : MUTED} bold={bonus}>
+              {m}
+            </T>
+          </g>
+        );
+      })}
+      <T x={150} y={30} size={10.5} bold color={GOLD} cls="a-in" d={1.4}>
+        Bonus month
+      </T>
+      <T x={150} y={44} size={10} color={MUTED} cls="a-in" d={1.6}>
+        taxed at your top rate
+      </T>
+      <T x={160} y={142} anchor="middle" size={10} color={MUTED} cls="a-in" d={1.9}>
+        Regular pay: the same tax every month
+      </T>
+    </Scene>
+  );
+}
+
 // ---------- topics ----------
 
 export interface Topic {
@@ -1265,6 +1382,62 @@ export const TOPICS = {
           <b>{day(rules.payments.final.due)}</b>, and file your return by <b>{day(rules.filing.deadline)}</b>.
         </p>
         <p>Paying or filing late adds penalties and interest, so file even if you can&rsquo;t pay everything yet.</p>
+      </>
+    ),
+  },
+  payslips: {
+    title: 'T-10 certificate or payslips?',
+    caption: 'Twelve payslips add up to the same figures as the T-10.',
+    scene: PayslipsScene,
+    body: (
+      <>
+        <p>
+          The <b>T-10</b> is the yearly certificate your employer gives you after March. It shows your total pay and the
+          total APIT deducted. If you have it, choose T-10 and copy two numbers.
+        </p>
+        <p>
+          No T-10 yet? Choose <b>Monthly payslips</b> and enter each month&rsquo;s <b>total gross earnings</b> and{' '}
+          <b>APIT</b>. Your own EPF 8% and other deductions don&rsquo;t reduce tax, so ignore them. Employer EPF 12% and
+          ETF 3% aren&rsquo;t taxed either.
+        </p>
+      </>
+    ),
+    where: 'Ask HR or payroll for the T-10. Payslips are usually in your HR system or email.',
+  },
+  pegged: {
+    title: 'Salaries pegged to US dollars',
+    caption: 'The basic uses the peg rate; an allowance makes up the rest.',
+    scene: PeggedScene,
+    body: (
+      <>
+        <p>
+          Some companies set your salary in <b>US dollars</b>. The payslip shows a <b>basic salary</b> at a fixed peg
+          rate (for example Rs 200 per dollar) and a <b>variable allowance</b> that tops it up to the current exchange
+          rate.
+        </p>
+        <p>
+          Both parts are taxable salary. Enter the dollar amount and we work out the basic. The allowance is estimated
+          from the CBSL monthly average until you type the figure from your payslip. Add any other regular monthly
+          allowance, such as an ex gratia payment, to the same box.
+        </p>
+      </>
+    ),
+    example: '$2,000 at a Rs 200 peg is a basic of Rs 400,000. At Rs 300 a dollar the allowance is Rs 200,000.',
+  },
+  bonus: {
+    title: 'Bonuses and one-off payments',
+    caption: 'One-off payments are taxed as an extra on top of the year’s regular pay.',
+    scene: BonusScene,
+    body: (
+      <>
+        <p>
+          Put <b>bonuses</b>, <b>salary arrears</b> and other <b>one-off payments</b> in this column, not in the monthly
+          pay. Your employer deducts APIT on them at your highest rate, which is often 36%.
+        </p>
+        <p>
+          Keeping them separate lets the calculator check the APIT on each payslip. It all adds up to the same yearly
+          income either way.
+        </p>
       </>
     ),
   },

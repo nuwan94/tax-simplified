@@ -15,6 +15,17 @@ export function parseAmount(raw: string): Parsed {
   return { value: n };
 }
 
+/** Parses a payslip amount, which may have cents: "250,000.00", "Rs 1,250.5". */
+export function parseCents(raw: string): Parsed {
+  const s = raw.replace(/[\s,]/g, '').replace(/^rs\.?/i, '');
+  if (s === '') return { empty: true };
+  if (!/^\d+(\.\d{0,2})?$/.test(s))
+    return { error: /^\d+\.\d{3,}$/.test(s) ? 'Use at most 2 decimals' : 'Enter a number' };
+  const n = Number(s);
+  if (!Number.isFinite(n) || n > Number.MAX_SAFE_INTEGER) return { error: 'Amount is too large' };
+  return { value: n };
+}
+
 export function formatLKR(n: number): string {
   return `Rs ${Math.abs(n).toLocaleString('en-LK')}`;
 }
