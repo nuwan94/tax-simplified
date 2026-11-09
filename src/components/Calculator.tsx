@@ -46,6 +46,8 @@ export function Calculator({
       payslips: form.payslips,
       interests: form.int,
       businesses: form.biz,
+      expenses: form.expenses,
+      unbilledTax: form.unbilledTax,
       now: new Date(),
     });
     const { downloadSummaryPdf } = await import('@/lib/summaryPdf');
@@ -218,6 +220,8 @@ export function Calculator({
             hasErrors={hasErrors}
             hasProfile={!!profile}
             apitEstimatedMonths={form.apitEstimatedMonths}
+            unbilled={form.unbilled}
+            unbilledTax={form.unbilledTax}
             today={today}
           />
         </div>
@@ -244,10 +248,13 @@ function ResultPanel(props: {
   hasErrors: boolean;
   hasProfile: boolean;
   apitEstimatedMonths: number;
+  unbilled: number;
+  unbilledTax: number;
   today: Date | null;
   onDownload: () => Promise<void>;
 }) {
   const { result, obligation, allAnswered, hasErrors, hasProfile, apitEstimatedMonths, today, onDownload } = props;
+  const { unbilled, unbilledTax } = props;
   const [pdfState, setPdfState] = useState<'idle' | 'busy' | 'failed'>('idle');
 
   if (obligation?.status === 'out_of_scope') {
@@ -282,7 +289,9 @@ function ResultPanel(props: {
         <div className="statement-body">
           <p className="empty-title">{hasErrors ? 'Check the highlighted amounts' : 'No figures yet'}</p>
           {hasErrors && (
-            <p className="muted">Rupee amounts are whole numbers. Dollar and payslip amounts can have cents.</p>
+            <p className="muted">
+              Rupee amounts are whole numbers. Foreign currency and payslip amounts can have cents.
+            </p>
           )}
         </div>
       </div>
@@ -368,6 +377,17 @@ function ResultPanel(props: {
       {result.remittanceSaving !== undefined && result.remittanceSaving > 0 && (
         <Note tone="warn" icon={<InfoIcon />}>
           Bringing it in through a Sri Lankan bank would save <strong>{formatLKR(result.remittanceSaving)}</strong>.
+        </Note>
+      )}
+      {unbilled > 0 && (
+        <Note tone="warn" icon={<InfoIcon />}>
+          {formatLKR(unbilled)} of expenses have no bill.
+          {unbilledTax > 0 && (
+            <>
+              {' '}
+              If IRD disallows them, tax goes up by <strong>{formatLKR(unbilledTax)}</strong>.
+            </>
+          )}
         </Note>
       )}
       {result.businessIncome > 0 && (

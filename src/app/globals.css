@@ -877,7 +877,150 @@ button {
   }
 }
 
-/* month-by-month USD entry */
+/* month-by-month foreign currency entry */
+.month .amount.code input {
+  padding-left: 44px;
+}
+.select {
+  width: 100%;
+  min-height: 44px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+.select:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: -1px;
+  border-color: var(--focus);
+}
+
+/* itemised expenses */
+.expenses {
+  container: expenses / inline-size;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.expenses-head {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.expense-rows {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.expense-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'what x'
+    'amount bill';
+  gap: 6px 8px;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
+}
+.expense-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.expense-what {
+  grid-area: what;
+}
+.expense-row .amount {
+  grid-area: amount;
+}
+.expense-row .bill-check {
+  grid-area: bill;
+}
+.expense-row .icon-btn {
+  grid-area: x;
+}
+.expense-row .field-error {
+  grid-column: 1 / -1;
+}
+@container expenses (min-width: 480px) {
+  .expense-row {
+    grid-template-columns: minmax(0, 1fr) 140px auto auto;
+    grid-template-areas: 'what amount bill x';
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+}
+.expense-row input[type='text'] {
+  width: 100%;
+  min-height: 44px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+.expense-row .amount input {
+  font-family: var(--font-figures);
+  text-align: right;
+  padding-left: 34px;
+}
+.expense-row input[type='text']:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: -1px;
+  border-color: var(--focus);
+}
+.expense-row.has-error .amount input {
+  border-color: var(--owe);
+  background: var(--owe-bg);
+}
+.bill-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 15px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.bill-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+.bill-check.on {
+  border-color: var(--primary);
+}
+.expenses-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.expenses-total {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 15px;
+}
+.expenses-total .num {
+  font-family: var(--font-figures);
+}
+.unbilled {
+  font-size: 13px;
+  color: var(--owe);
+}
+
 .months {
   border: 1px solid var(--line);
   border-radius: var(--radius);

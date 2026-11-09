@@ -15,7 +15,7 @@ import {
 } from '@/index';
 import { parseAmount, parseCents } from '@/lib/money';
 import { payFor, peggedSplit, summarizeMonths, type PayChange, type PayMonth } from '@/lib/payslips';
-import { convertMonthly, getFxRates, parseForeignAmount, yaMonths, type Conversion } from '@/lib/fx';
+import { convertMonthly, getFxRates, hasFxRates, parseForeignAmount, yaMonths, type Conversion } from '@/lib/fx';
 import { addableSections, visibleSections, type ProfileId, type Section } from '@/lib/profiles';
 import type { TopicId } from './explainers';
 
@@ -109,16 +109,34 @@ export interface BusinessRow {
   origin: 'local' | 'foreign';
   /** Foreign only: received in foreign currency through a Sri Lankan bank. */
   remitted: boolean;
-  /** Enter the income in rupees, or in US dollars month by month (converted at CBSL monthly averages). */
-  currency: 'LKR' | 'USD';
+  /** "LKR" for a yearly rupee total, or a currency code entered month by month (converted at CBSL monthly averages). */
+  currency: string;
   gross: string;
-  /** USD mode: amount received per month, keyed "YYYY-MM". */
+  /** Foreign currency: amount received per month, keyed "YYYY-MM". */
   monthly: Record<string, string>;
-  expenses: string;
+  /** Each cost on its own line, with whether the bill or receipt is kept. */
+  expenseItems: ExpenseItem[];
   tax: string;
 }
 
+export interface ExpenseItem {
+  key: string;
+  what: string;
+  amount: string;
+  bill: boolean;
+}
+
+export const newExpenseItem = (key: string): ExpenseItem => ({ key, what: '', amount: '', bill: false });
+
+/** Expense totals for one income entry. */
+export interface ExpenseTotals {
+  total: number;
+  unbilled: number;
+  lines: { what: string; amount: number; bill: boolean }[];
+}
+
 export const usdRates = getFxRates('USD', YA);
+export const fxRates = (currency: string) => getFxRates(currency, YA);
 export const MONTHS = yaMonths(YA);
 
 export const QUESTIONS: { id: keyof Answers; text: string; hint: TopicId }[] = [
@@ -272,25 +290,44 @@ function parseRows(
       source: { method: 'manual' as const },
     }));
 
-  // USD rows: convert each month at the CBSL monthly average.
+  // Foreign-currency rows: convert each month at that currency's CBSL monthly average.
   const conversions: Record<string, Conversion> = {};
   for (const r of businessRows) {
-    if (r.currency !== 'USD') continue;
+    if (r.currency === 'LKR' || !hasFxRates(r.currency, YA)) continue;
     const amounts: Record<string, number> = {};
     for (const m of MONTHS) {
       const p = parseForeignAmount(r.monthly[m] ?? '');
       if ('error' in p) errors[`${r.key}.m.${m}`] = p.error;
       else if ('value' in p) amounts[m] = p.value;
     }
-    conversions[r.key] = convertMonthly(amounts, usdRates);
+    conversions[r.key] = convertMonthly(amounts, fxRates(r.currency));
+  }
+
+  const expenses: Record<string, ExpenseTotals> = {};
+  for (const r of businessRows) {
+    const lines = r.expenseItems
+      .map((x, xi) => ({ x, xi }))
+      .filter(({ x }) => filled(x.amount))
+      .map(({ x, xi }) => ({
+        what: x.what.trim() || `Expense ${xi + 1}`,
+        amount: num(`${r.key}.x.${x.key}`, x.amount),
+        bill: x.bill,
+      }));
+    expenses[r.key] = {
+      total: sum(lines.map((l) => l.amount)),
+      unbilled: sum(lines.filter((l) => !l.bill).map((l) => l.amount)),
+      lines,
+    };
   }
 
   const biz: BusinessInput[] = businessRows
     .map((r, i) => ({ r, i }))
     .filter(({ r }) =>
-      r.currency === 'USD'
-        ? filled(...Object.values(r.monthly), r.expenses, r.tax)
-        : filled(r.gross, r.expenses, r.tax),
+      filled(
+        ...(r.currency === 'LKR' ? [r.gross] : Object.values(r.monthly)),
+        ...r.expenseItems.map((x) => x.amount),
+        r.tax,
+      ),
     )
     .map(({ r, i }) => {
       const conv = conversions[r.key];
@@ -300,10 +337,10 @@ function parseRows(
         origin: r.origin,
         remittedViaBank: r.origin === 'foreign' && r.remitted,
         gross: conv ? conv.totalLkr : num(`${r.key}.gross`, r.gross),
-        expenses: num(`${r.key}.expenses`, r.expenses),
+        expenses: expenses[r.key]?.total ?? 0,
         taxDeducted: num(`${r.key}.tax`, r.tax),
         ...(conv && conv.totalForeign > 0
-          ? { foreign: { currency: 'USD', amount: conv.totalForeign, basis: 'cbsl-monthly-average' as const } }
+          ? { foreign: { currency: conv.currency, amount: conv.totalForeign, basis: 'cbsl-monthly-average' as const } }
           : {}),
         source: { method: 'manual' as const },
       };
@@ -311,7 +348,7 @@ function parseRows(
 
   const instalmentsPaid = num('instalments', instalments);
 
-  return { emp, int, biz, instalmentsPaid, conversions, payslips, errors };
+  return { emp, int, biz, instalmentsPaid, conversions, expenses, payslips, errors };
 }
 
 export const newBusinessRow = (key: string): BusinessRow => ({
@@ -322,7 +359,7 @@ export const newBusinessRow = (key: string): BusinessRow => ({
   currency: 'USD',
   gross: '',
   monthly: {},
-  expenses: '',
+  expenseItems: [newExpenseItem(`${key}x1`)],
   tax: '',
 });
 
@@ -348,10 +385,20 @@ function restore(raw: unknown): SavedForm {
     employers: employers.map(migrateEmployer),
     interests:
       Array.isArray(d.interests) && d.interests.length ? d.interests : [{ key: 'i1', name: '', gross: '', tax: '' }],
-    businessRows: Array.isArray(d.businessRows) ? d.businessRows.map((b) => ({ ...newBusinessRow(b.key), ...b })) : [],
+    businessRows: Array.isArray(d.businessRows) ? d.businessRows.map(migrateBusiness) : [],
     instalments: d.instalments ?? '',
     noInterest: !!d.noInterest,
   };
+}
+
+/** Brings a freelance entry saved by an earlier version up to date. */
+function migrateBusiness(b: BusinessRow & { expenses?: string }): BusinessRow {
+  const { expenses, ...rest } = b;
+  const r: BusinessRow = { ...newBusinessRow(b.key), ...rest };
+  // earlier versions had one expenses total
+  if (!Array.isArray(b.expenseItems)) r.expenseItems = [{ ...newExpenseItem(`${b.key}x1`), amount: expenses ?? '' }];
+  if (r.currency !== 'LKR' && !hasFxRates(r.currency, YA)) r.currency = 'USD';
+  return r;
 }
 
 /** Brings an employer saved by an earlier version up to date. */
@@ -380,7 +427,12 @@ function migrateEmployer(e: EmployerRow & { usual?: string }): EmployerRow {
 
 /** Next free number for row keys like "e3", "b12". */
 function nextKeyNumber(f: SavedForm): number {
-  const keys = [...f.employers, ...f.interests, ...f.businessRows].map((x) => Number(x.key.replace(/^\D+/, '')) || 0);
+  const keys = [
+    ...f.employers,
+    ...f.interests,
+    ...f.businessRows,
+    ...f.businessRows.flatMap((b) => b.expenseItems),
+  ].map((x) => Number(x.key.replace(/^\D+/, '')) || 0);
   return Math.max(1, ...keys) + 1;
 }
 
@@ -407,7 +459,7 @@ export function useTaxForm(initial?: unknown, onSave?: (data: SavedForm) => void
   const showInterest = has('interest');
   const showFreelance = has('freelance');
   const showPaid = has('paid');
-  const { emp, int, biz, instalmentsPaid, conversions, payslips, errors } = useMemo(
+  const { emp, int, biz, instalmentsPaid, conversions, expenses, payslips, errors } = useMemo(
     () =>
       parseRows(
         showSalary ? employers : [],
@@ -423,6 +475,23 @@ export function useTaxForm(initial?: unknown, onSave?: (data: SavedForm) => void
     if (hasErrors || (emp.length === 0 && int.length === 0 && biz.length === 0)) return null;
     return calculate({ ya: YA, employments: emp, interests: int, businesses: biz, instalmentsPaid }, rules);
   }, [emp, int, biz, instalmentsPaid, hasErrors]);
+
+  // Expenses without a bill may be disallowed: the extra tax if they were.
+  const unbilled = sum(Object.values(expenses).map((x) => x.unbilled));
+  const unbilledTax = useMemo(() => {
+    if (!result || unbilled === 0) return 0;
+    const strict = calculate(
+      {
+        ya: YA,
+        employments: emp,
+        interests: int,
+        businesses: biz.map((b) => ({ ...b, expenses: b.expenses - (expenses[b.id]?.unbilled ?? 0) })),
+        instalmentsPaid,
+      },
+      rules,
+    );
+    return Math.max(0, strict.tax - result.tax);
+  }, [result, unbilled, emp, int, biz, expenses, instalmentsPaid]);
 
   // The APIT question only matters when there is a salary section.
   const questions = QUESTIONS.filter((q) => q.id !== 'allEmployersDeductedApit' || showSalary);
@@ -540,6 +609,23 @@ export function useTaxForm(initial?: unknown, onSave?: (data: SavedForm) => void
       setBusinessRows((rs) => rs.map((x) => (x.key === key ? { ...x, ...patch } : x))),
     addBusiness: () => setBusinessRows((rs) => [...rs, newBusinessRow(newKey('b'))]),
     removeBusiness: (key: string) => setBusinessRows((rs) => rs.filter((x) => x.key !== key)),
+    /** Change one expense line of a freelance entry. */
+    updateExpense: (key: string, itemKey: string, patch: Partial<ExpenseItem>) =>
+      setBusinessRows((rs) =>
+        rs.map((x) =>
+          x.key === key
+            ? { ...x, expenseItems: x.expenseItems.map((e) => (e.key === itemKey ? { ...e, ...patch } : e)) }
+            : x,
+        ),
+      ),
+    addExpense: (key: string) =>
+      setBusinessRows((rs) =>
+        rs.map((x) => (x.key === key ? { ...x, expenseItems: [...x.expenseItems, newExpenseItem(newKey('x'))] } : x)),
+      ),
+    removeExpense: (key: string, itemKey: string) =>
+      setBusinessRows((rs) =>
+        rs.map((x) => (x.key === key ? { ...x, expenseItems: x.expenseItems.filter((e) => e.key !== itemKey) } : x)),
+      ),
 
     instalments,
     setInstalments,
@@ -548,6 +634,9 @@ export function useTaxForm(initial?: unknown, onSave?: (data: SavedForm) => void
     int,
     biz,
     conversions,
+    expenses,
+    unbilled,
+    unbilledTax,
     payslips,
     apitEstimatedMonths,
     errors,

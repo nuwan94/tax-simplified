@@ -1,6 +1,15 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { convertMonthly, getFxRates, monthLabel, parseForeignAmount, rateOn, yaMonths } from '../src/lib/fx.ts';
+import {
+  CURRENCIES,
+  convertMonthly,
+  getFxRates,
+  hasFxRates,
+  monthLabel,
+  parseForeignAmount,
+  rateOn,
+  yaMonths,
+} from '../src/lib/fx.ts';
 
 const usd = getFxRates('USD', '2025/2026');
 
@@ -27,6 +36,43 @@ describe('CBSL USD rates file', () => {
   it('cites CBSL and the Act', () => {
     assert.match(usd.source, /cbsl\.gov\.lk/);
     assert.match(usd.series, /CBSL/);
+  });
+});
+
+describe('CBSL rates for other currencies', () => {
+  it('every listed currency has twelve monthly averages that are the mean of its daily rates', () => {
+    assert.ok(CURRENCIES.length >= 19);
+    for (const { code } of CURRENCIES) {
+      assert.ok(hasFxRates(code, '2025/2026'), code);
+      const r = getFxRates(code, '2025/2026');
+      assert.equal(r.currency, code);
+      assert.match(r.source, /cbsl\.gov\.lk/);
+      for (const m of yaMonths('2025/2026')) {
+        const days = Object.entries(r.daily).filter(([d]) => d.startsWith(m));
+        const mean = days.reduce((s, [, x]) => s + x, 0) / days.length;
+        assert.ok(days.length >= 15, `${code} ${m}`);
+        assert.equal(r.monthly[m]!.average, Math.round(mean * 10_000) / 10_000, `${code} ${m}`);
+      }
+    }
+  });
+
+  it('rates are in a sensible range', () => {
+    const apr = (c: string) => getFxRates(c, '2025/2026').monthly['2025-04']!.average;
+    assert.ok(apr('GBP') > apr('EUR') && apr('EUR') > apr('USD'));
+    assert.ok(apr('JPY') > 1 && apr('JPY') < 5);
+    assert.ok(apr('INR') > 2 && apr('INR') < 5);
+  });
+
+  it('converts euros at the euro rate', () => {
+    const eur = getFxRates('EUR', '2025/2026');
+    const c = convertMonthly({ '2025-06': 500 }, eur);
+    assert.equal(c.currency, 'EUR');
+    assert.equal(c.totalLkr, Math.round(500 * eur.monthly['2025-06']!.average));
+  });
+
+  it('knows which currencies have no rates', () => {
+    assert.equal(hasFxRates('XYZ', '2025/2026'), false);
+    assert.throws(() => getFxRates('XYZ', '2025/2026'), /No XYZ rates/);
   });
 });
 
@@ -63,7 +109,7 @@ describe('conversion', () => {
 
 describe('parseForeignAmount', () => {
   it('accepts dollars with cents and prefixes', () => {
-    for (const s of ['1250.5', '1,250.50', '$1250.50', 'USD 1,250.50']) {
+    for (const s of ['1250.5', '1,250.50', '$1250.50', 'USD 1,250.50', 'EUR 90', '€90', '£90.10', 'A$100']) {
       assert.ok('value' in parseForeignAmount(s), s);
     }
     assert.deepEqual(parseForeignAmount('1,250.50'), { value: 1250.5 });

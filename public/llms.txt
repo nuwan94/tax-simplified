@@ -3,7 +3,7 @@
 > Free Sri Lanka income tax calculator for year of assessment 2025/26 (1 April 2025 to 31 March 2026). Runs in the browser; nothing is uploaded.
 
 - Site: https://tax.nuwan.dev/
-- Covers: salary and APIT (from monthly payslips or the T-10 certificate), salaries pegged to US dollars, freelance and foreign income (taxed at no more than 15% when received in foreign currency through a Sri Lankan bank, converted at CBSL monthly average rates), bank interest and the 10% AIT credit, quarterly instalments.
+- Covers: salary and APIT (from monthly payslips or the T-10 certificate), salaries pegged to US dollars, freelance and foreign income (taxed at no more than 15% when received in foreign currency through a Sri Lankan bank, in US dollars and 18 other currencies converted at CBSL monthly average rates, with itemised expenses), bank interest and the 10% AIT credit, quarterly instalments.
 - Rules: personal relief Rs 1,800,000; then 6%, 18%, 24%, 30% and 36% bands. Return due 30 November 2026; balance payable by 30 September 2026.
 - Source: Inland Revenue Department Guide to the Return of Income 2025/26 (https://www.ird.gov.lk/en/Downloads/IT_Individuals_Doc/Asmt_IIT_004_2025_2026_E.pdf)
 - Not tax advice. Not affiliated with the Inland Revenue Department.

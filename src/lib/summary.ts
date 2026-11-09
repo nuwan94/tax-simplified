@@ -44,6 +44,10 @@ export interface SummaryInput {
   payslips: Record<string, PaySummary>;
   interests: InterestInput[];
   businesses: BusinessInput[];
+  /** Itemised expenses per business id. */
+  expenses?: Record<string, { lines: { what: string; amount: number; bill: boolean }[]; unbilled: number }>;
+  /** Extra tax if expenses without a bill were disallowed. */
+  unbilledTax?: number;
   now: Date;
 }
 
@@ -157,6 +161,18 @@ export function buildSummary(i: SummaryInput): SummaryDoc {
     });
   }
 
+  for (const b of i.businesses) {
+    const x = i.expenses?.[b.id];
+    if (!x || x.lines.length === 0) continue;
+    tables.push({
+      title: `Expenses: ${b.description}`,
+      head: ['Expense', 'Bill', 'Rs'],
+      rows: x.lines.map((l) => [l.what, l.bill ? 'Yes' : 'No', rs(l.amount)]),
+      foot: ['Total', '', rs(b.expenses)],
+      numeric: [2],
+    });
+  }
+
   const notes: string[] = [];
   if (Object.values(i.payslips).some((p) => p.estimatedApitMonths > 0)) {
     notes.push('* APIT worked out from the APIT tables, not taken from a payslip.');
@@ -164,8 +180,19 @@ export function buildSummary(i: SummaryInput): SummaryDoc {
   if (Object.values(i.payslips).some((p) => p.estimatedPayMonths > 0)) {
     notes.push('Some pegged allowances are estimated from CBSL monthly average USD rates.');
   }
+  if (i.businesses.some((b) => b.foreign)) {
+    notes.push('Foreign currency is converted at CBSL monthly average rates.');
+  }
   if (r.remittanceSaving) {
     notes.push(`Bringing foreign income in through a Sri Lankan bank would save Rs ${rs(r.remittanceSaving)}.`);
+  }
+  const unbilled = Object.values(i.expenses ?? {}).reduce((s, x) => s + x.unbilled, 0);
+  if (unbilled > 0) {
+    notes.push(
+      `Rs ${rs(unbilled)} of expenses have no bill.${
+        i.unbilledTax ? ` If IRD disallows them, tax goes up by Rs ${rs(i.unbilledTax)}.` : ''
+      }`,
+    );
   }
   for (const w of r.warnings) notes.push(w.message);
   if (i.obligation && i.obligation.status !== 'out_of_scope') notes.push(...i.obligation.reasons);

@@ -4,32 +4,37 @@ import { AmountCell, Cell, SectionHead } from './Fields';
 import { Hint, WithHint } from './Hint';
 import type { Section } from '@/lib/profiles';
 import { PlusIcon, XIcon } from './Icons';
-import { MONTHS, fmt, rules, usdRates, type TaxForm } from './useTaxForm';
-import { monthLabel, type Conversion } from '@/lib/fx';
+import { MONTHS, fmt, fxRates, rules, type BusinessRow, type TaxForm } from './useTaxForm';
+import { CURRENCIES, monthLabel, type Conversion } from '@/lib/fx';
 
-/** Twelve month cells in US dollars, each converted at that month's CBSL average. */
-function MonthlyUsd(props: {
+const currencyName = (code: string) => CURRENCIES.find((c) => c.code === code)?.name ?? code;
+const showRate = (r: number) => r.toFixed(r < 10 ? 4 : 2);
+
+/** Twelve month cells in a foreign currency, each converted at that month's CBSL average. */
+function MonthlyForeign(props: {
   rowKey: string;
+  currency: string;
   values: Record<string, string>;
   errors: Record<string, string>;
   conversion: Conversion | undefined;
   onChange: (month: string, v: string) => void;
 }) {
-  const { rowKey, values, errors, conversion, onChange } = props;
+  const { rowKey, currency, values, errors, conversion, onChange } = props;
+  const rates = fxRates(currency);
   const lkrFor = (m: string) => conversion?.lines.find((l) => l.month === m)?.lkr;
   return (
     <div className="months">
       <div className="months-grid">
         {MONTHS.map((m) => {
-          const rate = usdRates.monthly[m]!.average;
+          const rate = rates.monthly[m]!.average;
           const err = errors[`${rowKey}.m.${m}`];
           const lkr = lkrFor(m);
           return (
             <label key={m} className={`month${err ? ' has-error' : ''}`}>
               <span className="month-name">{monthLabel(m)}</span>
-              <span className="amount">
+              <span className="amount code">
                 <span className="amount-prefix" aria-hidden="true">
-                  $
+                  {currency}
                 </span>
                 <input
                   type="text"
@@ -38,7 +43,7 @@ function MonthlyUsd(props: {
                   placeholder="0"
                   value={values[m] ?? ''}
                   onChange={(e) => onChange(m, e.target.value)}
-                  aria-label={`US dollars received in ${monthLabel(m)}`}
+                  aria-label={`${currencyName(currency)} received in ${monthLabel(m)}`}
                   aria-invalid={!!err}
                 />
               </span>
@@ -47,7 +52,7 @@ function MonthlyUsd(props: {
                   <span className="field-error">{err}</span>
                 ) : (
                   <>
-                    × {rate.toFixed(2)}
+                    × {showRate(rate)}
                     {lkr !== undefined && <b>Rs {fmt(lkr)}</b>}
                   </>
                 )}
@@ -60,11 +65,91 @@ function MonthlyUsd(props: {
         <span>
           Total{' '}
           <b className="num">
-            USD {(conversion?.totalForeign ?? 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
+            {currency} {(conversion?.totalForeign ?? 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
           </b>{' '}
           = <b className="num">Rs {fmt(conversion?.totalLkr ?? 0)}</b>
         </span>
       </p>
+    </div>
+  );
+}
+
+/** One line per cost, each with whether the bill is kept. */
+function ExpenseList({ f, row, index }: { f: TaxForm; row: BusinessRow; index: number }) {
+  const totals = f.expenses[row.key];
+  const label = (n: number) => `expense ${n + 1} of freelance income ${index + 1}`;
+  return (
+    <div className="expenses">
+      <h4 className="expenses-head">
+        <WithHint text="Expenses" topic="expenses" />
+      </h4>
+      {row.expenseItems.length > 0 && (
+        <ul className="expense-rows">
+          {row.expenseItems.map((x, n) => {
+            const err = f.errors[`${row.key}.x.${x.key}`];
+            return (
+              <li key={x.key} className={`expense-row${err ? ' has-error' : ''}`}>
+                <input
+                  type="text"
+                  className="expense-what"
+                  autoComplete="off"
+                  placeholder="Software, fees, internet"
+                  value={x.what}
+                  onChange={(e) => f.updateExpense(row.key, x.key, { what: e.target.value })}
+                  aria-label={`What was ${label(n)}`}
+                />
+                <span className="amount">
+                  <span className="amount-prefix" aria-hidden="true">
+                    Rs
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="0"
+                    value={x.amount}
+                    onChange={(e) => f.updateExpense(row.key, x.key, { amount: e.target.value })}
+                    aria-label={`Amount of ${label(n)}`}
+                    aria-invalid={!!err}
+                  />
+                </span>
+                <label className={`bill-check${x.bill ? ' on' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={x.bill}
+                    onChange={(e) => f.updateExpense(row.key, x.key, { bill: e.target.checked })}
+                  />
+                  Have bill
+                </label>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label={`Remove ${label(n)}`}
+                  onClick={() => f.removeExpense(row.key, x.key)}
+                >
+                  <XIcon />
+                </button>
+                {err && <span className="field-error">{err}</span>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <div className="expenses-foot">
+        <button type="button" className="btn-secondary small" onClick={() => f.addExpense(row.key)}>
+          <PlusIcon /> Add expense
+        </button>
+        {totals && totals.total > 0 && (
+          <span className="expenses-total">
+            Total <b className="num">Rs {fmt(totals.total)}</b>
+            {totals.unbilled > 0 && (
+              <span className="unbilled">
+                {totals.unbilled === totals.total ? 'No bills' : `Rs ${fmt(totals.unbilled)} without a bill`}
+              </span>
+            )}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -154,28 +239,30 @@ export function FreelanceSection({ f }: { f: TaxForm }) {
               </fieldset>
             )}
 
-            <fieldset className="inline-q">
-              <legend>
-                <WithHint text="Enter the income in" topic="fxMonthly" />
-              </legend>
-              <div className="seg" role="radiogroup" aria-label="Enter the income in">
-                {(['USD', 'LKR'] as const).map((c) => (
-                  <label key={c} className={r.currency === c ? 'on' : ''}>
-                    <input
-                      type="radio"
-                      name={`${r.key}-ccy`}
-                      checked={r.currency === c}
-                      onChange={() => f.updateBusiness(r.key, { currency: c })}
-                    />
-                    {c === 'USD' ? 'US dollars, by month' : 'Rupees, yearly total'}
-                  </label>
+            <div className="cell">
+              <span className="cell-label">
+                <span aria-hidden="true">Paid in</span>
+                <Hint topic="fxMonthly" />
+              </span>
+              <select
+                className="select"
+                value={r.currency}
+                onChange={(e) => f.updateBusiness(r.key, { currency: e.target.value })}
+                aria-label={`Currency for freelance income ${i + 1}`}
+              >
+                <option value="LKR">Sri Lankan rupees (yearly total)</option>
+                {CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name} ({c.code}), by month
+                  </option>
                 ))}
-              </div>
-            </fieldset>
+              </select>
+            </div>
 
-            {r.currency === 'USD' && (
-              <MonthlyUsd
+            {r.currency !== 'LKR' && (
+              <MonthlyForeign
                 rowKey={r.key}
+                currency={r.currency}
                 values={r.monthly}
                 errors={f.errors}
                 conversion={f.conversions[r.key]}
@@ -183,7 +270,7 @@ export function FreelanceSection({ f }: { f: TaxForm }) {
               />
             )}
 
-            <div className={r.currency === 'USD' ? 'pair-2' : 'triple'}>
+            <div className="pair-2">
               {r.currency === 'LKR' && (
                 <AmountCell
                   label="Income for the year"
@@ -193,13 +280,6 @@ export function FreelanceSection({ f }: { f: TaxForm }) {
                 />
               )}
               <AmountCell
-                label="Expenses"
-                topic="expenses"
-                value={r.expenses}
-                error={f.errors[`${r.key}.expenses`]}
-                onChange={(v) => f.updateBusiness(r.key, { expenses: v })}
-              />
-              <AmountCell
                 label={r.origin === 'local' ? 'WHT deducted by client' : 'Tax paid abroad'}
                 topic={r.origin === 'local' ? 'wht' : 'foreignTax'}
                 value={r.tax}
@@ -207,6 +287,8 @@ export function FreelanceSection({ f }: { f: TaxForm }) {
                 onChange={(v) => f.updateBusiness(r.key, { tax: v })}
               />
             </div>
+
+            <ExpenseList f={f} row={r} index={i} />
 
             {parsed && (
               <p className="entry-net">

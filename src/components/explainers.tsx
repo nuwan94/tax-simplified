@@ -1233,18 +1233,20 @@ export const TOPICS = {
       'Moving your Payoneer balance to your Sri Lankan bank’s dollar account before you spend it keeps you on the lower rate.',
   },
   fxMonthly: {
-    title: 'Converting dollars to rupees',
+    title: 'Converting foreign currency to rupees',
     scene: FxScene,
     body: (
       <>
         <p>
-          Tax is worked out in rupees. Enter the dollars you received <b>in each month</b>, and we convert them using
-          the Central Bank of Sri Lanka (CBSL) <b>average USD rate for that month</b>.
+          Tax is worked out in rupees. Pick the currency the client paid in and enter what you received{' '}
+          <b>in each month</b>. We convert it using the Central Bank of Sri Lanka (CBSL){' '}
+          <b>average rate for that month</b>.
         </p>
         <p>
           The law uses the CBSL rate on the <b>exact day</b> the money was received, so the monthly average is a close
           estimate. Use the month the money reached you, not the month you sent the invoice.
         </p>
+        <p>If one client pays in more than one currency, add it once for each currency.</p>
       </>
     ),
     where: (
@@ -1267,7 +1269,11 @@ export const TOPICS = {
         </p>
         <p>
           Typical ones are platform and payment fees, software subscriptions, and the work share of internet and phone
-          bills. Personal spending doesn&rsquo;t count. Keep receipts in case IRD asks.
+          bills. Personal spending doesn&rsquo;t count.
+        </p>
+        <p>
+          Add each cost on its own line and tick <b>Have bill</b> when you have the invoice or receipt. IRD can refuse
+          an expense you can&rsquo;t show proof for, so we show how much more tax you would pay if they did.
         </p>
       </>
     ),

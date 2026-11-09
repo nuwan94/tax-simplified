@@ -62,6 +62,52 @@ describe('printable summary', () => {
     assert.equal(doc.facts.find(([k]) => k === 'Return')![1], 'Not decided: answer the checks');
   });
 
+  it('lists expenses with bills and warns about the ones without', () => {
+    const biz = {
+      id: 'b1',
+      description: 'Design work',
+      origin: 'foreign' as const,
+      remittedViaBank: true,
+      gross: 1_000_000,
+      expenses: 150_000,
+      taxDeducted: 0,
+      foreign: { currency: 'EUR', amount: 3_000, basis: 'cbsl-monthly-average' as const },
+      source: { method: 'manual' as const },
+    };
+    const withBiz = calculate({ ...input(employments), businesses: [biz], instalmentsPaid: 0 }, rules);
+    const d = buildSummary({
+      person: '',
+      ya: '2025/2026',
+      rules,
+      result: withBiz,
+      obligation: null,
+      employments,
+      payslips: {},
+      interests: [],
+      businesses: [biz],
+      expenses: {
+        b1: {
+          lines: [
+            { what: 'Laptop repair', amount: 100_000, bill: true },
+            { what: 'Internet', amount: 50_000, bill: false },
+          ],
+          unbilled: 50_000,
+        },
+      },
+      unbilledTax: 7_500,
+      now: new Date('2026-11-09T10:00:00Z'),
+    });
+    const t = d.tables.find((x) => x.title === 'Expenses: Design work')!;
+    assert.deepEqual(t.rows, [
+      ['Laptop repair', 'Yes', '100,000'],
+      ['Internet', 'No', '50,000'],
+    ]);
+    assert.deepEqual(t.foot, ['Total', '', '150,000']);
+    assert.ok(d.notes.includes('Rs 50,000 of expenses have no bill. If IRD disallows them, tax goes up by Rs 7,500.'));
+    assert.ok(d.notes.some((n) => n.startsWith('Foreign currency is converted')));
+    assert.match(d.tables[0]!.rows.find((r) => r[0]!.includes('Design work'))![0]!, /EUR 3,000\.00/);
+  });
+
   it('makes a safe file name', () => {
     assert.equal(summaryFileName('Amma', '2025/2026'), 'tax-summary-2025-26-amma.pdf');
     assert.equal(summaryFileName('  ', '2025/2026'), 'tax-summary-2025-26.pdf');
