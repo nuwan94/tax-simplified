@@ -290,7 +290,7 @@ function ResultPanel(props: {
           <p className="empty-title">{hasErrors ? 'Check the highlighted amounts' : 'No figures yet'}</p>
           {hasErrors && (
             <p className="muted">
-              Rupee amounts are whole numbers. Foreign currency and payslip amounts can have cents.
+              Amounts can have up to 2 decimals.
             </p>
           )}
         </div>

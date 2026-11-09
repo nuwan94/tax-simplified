@@ -36,7 +36,7 @@ export function AmountCell(props: {
         </span>
         <input
           type="text"
-          inputMode="numeric"
+          inputMode="decimal"
           autoComplete="off"
           placeholder="0"
           value={value}

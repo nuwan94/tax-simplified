@@ -104,7 +104,7 @@ function ExpenseList({ f, row, index }: { f: TaxForm; row: BusinessRow; index: n
                   </span>
                   <input
                     type="text"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     autoComplete="off"
                     placeholder="0"
                     value={x.amount}
