@@ -1,6 +1,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { availableYears, enactedRules, getRules, InvalidRulesError, progressiveTax, RulesNotConfirmedError, validateRules } from '../src/index.ts';
+import {
+  availableYears,
+  enactedRules,
+  getRules,
+  InvalidRulesError,
+  progressiveTax,
+  RulesNotConfirmedError,
+  validateRules,
+} from '../src/index.ts';
 
 describe('rules loader', () => {
   it('loads enacted YA 2025/26 with the IRD figures', () => {
@@ -8,7 +16,13 @@ describe('rules loader', () => {
     assert.equal(r.reliefs.personal.amount, 1_800_000);
     assert.deepEqual(
       r.progressiveRates.bands.map((b) => [b.upTo, b.rate]),
-      [[1_000_000, 0.06], [1_500_000, 0.18], [2_000_000, 0.24], [2_500_000, 0.3], [null, 0.36]],
+      [
+        [1_000_000, 0.06],
+        [1_500_000, 0.18],
+        [2_000_000, 0.24],
+        [2_500_000, 0.3],
+        [null, 0.36],
+      ],
     );
     assert.equal(r.withholding.interestResident.rate, 0.1);
     assert.equal(r.withholding.interestResident.final, false);
@@ -31,7 +45,15 @@ describe('rules loader', () => {
     assert.throws(() => validateRules(withBands([]), '2025/2026'), InvalidRulesError);
     assert.throws(() => validateRules(withBands([{ upTo: 100, rate: 0.1 }]), '2025/2026'), /last band/);
     assert.throws(
-      () => validateRules(withBands([{ upTo: 100, rate: 0.1 }, { upTo: 50, rate: 0.2 }, { upTo: null, rate: 0.3 }]), '2025/2026'),
+      () =>
+        validateRules(
+          withBands([
+            { upTo: 100, rate: 0.1 },
+            { upTo: 50, rate: 0.2 },
+            { upTo: null, rate: 0.3 },
+          ]),
+          '2025/2026',
+        ),
       /must increase/,
     );
     assert.throws(() => validateRules(withBands([{ upTo: null, rate: 1.5 }]), '2025/2026'), /rate out of range/);
@@ -49,6 +71,12 @@ describe('progressiveTax', () => {
   });
   it('splits exactly at band edges', () => {
     const { lines } = progressiveTax(1_500_000, bands);
-    assert.deepEqual(lines.map((l) => [l.from, l.to, l.tax]), [[0, 1_000_000, 60_000], [1_000_000, 1_500_000, 90_000]]);
+    assert.deepEqual(
+      lines.map((l) => [l.from, l.to, l.tax]),
+      [
+        [0, 1_000_000, 60_000],
+        [1_000_000, 1_500_000, 90_000],
+      ],
+    );
   });
 });

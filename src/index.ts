@@ -1,4 +1,12 @@
-export { getRules, enactedRules, availableYears, rulesVersion, validateRules, RulesNotConfirmedError, InvalidRulesError } from './rules/load.ts';
+export {
+  getRules,
+  enactedRules,
+  availableYears,
+  rulesVersion,
+  validateRules,
+  RulesNotConfirmedError,
+  InvalidRulesError,
+} from './rules/load.ts';
 export type { Rules, Band } from './rules/types.ts';
 export { calculate, InputError } from './engine/calculate.ts';
 export { progressiveTax, taxOnRange } from './engine/progressive.ts';

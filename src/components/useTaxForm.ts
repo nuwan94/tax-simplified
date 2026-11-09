@@ -16,6 +16,7 @@ import {
 import { parseAmount } from '@/lib/money';
 import { convertMonthly, getFxRates, parseForeignAmount, yaMonths, type Conversion } from '@/lib/fx';
 import { computeReadiness } from '@/lib/readiness';
+import { addableSections, visibleSections, type ProfileId, type Section } from '@/lib/profiles';
 import type { TopicId } from './explainers';
 
 // Shared, design-independent state and logic for every calculator UI.
@@ -230,13 +231,29 @@ export function useTaxForm() {
   const [instalments, setInstalments] = useState('');
   const nextId = useRef(2);
 
+  // Profile: which sections are on the page. Hidden sections are left out of the calculation.
+  const [profile, setProfileState] = useState<ProfileId | null>(null);
+  const [extra, setExtra] = useState<Section[]>([]);
+  const sections = visibleSections(profile, extra);
+  const has = (x: Section) => sections.includes(x);
+
   // Dates come from the viewer's clock, after hydration (pages are pre-rendered at build time).
   const [today, setToday] = useState<Date | null>(null);
   useEffect(() => setToday(new Date()), []);
 
+  const showSalary = has('salary');
+  const showInterest = has('interest');
+  const showFreelance = has('freelance');
+  const showPaid = has('paid');
   const { emp, int, biz, instalmentsPaid, conversions, errors } = useMemo(
-    () => parseRows(employers, interests, businessRows, instalments),
-    [employers, interests, businessRows, instalments],
+    () =>
+      parseRows(
+        showSalary ? employers : [],
+        showInterest ? interests : [],
+        showFreelance ? businessRows : [],
+        showPaid ? instalments : '',
+      ),
+    [employers, interests, businessRows, instalments, showSalary, showInterest, showFreelance, showPaid],
   );
   const hasErrors = Object.keys(errors).length > 0;
 
@@ -245,8 +262,10 @@ export function useTaxForm() {
     return calculate({ ya: YA, employments: emp, interests: int, businesses: biz, instalmentsPaid }, rules);
   }, [emp, int, biz, instalmentsPaid, hasErrors]);
 
-  const answeredCount = Object.values(answers).filter((v) => v !== null).length;
-  const allAnswered = answeredCount === QUESTIONS.length;
+  // The APIT question only matters when there is a salary section.
+  const questions = QUESTIONS.filter((q) => q.id !== 'allEmployersDeductedApit' || showSalary);
+  const answeredCount = questions.filter((q) => answers[q.id] !== null).length;
+  const allAnswered = answeredCount === questions.length;
 
   const obligation: FilingObligation | null = useMemo(() => {
     if (!allAnswered) return null;
@@ -254,7 +273,7 @@ export function useTaxForm() {
       resident: answers.resident!,
       hasOtherIncome: answers.hasOtherIncome!,
       hasOtherReliefs: answers.hasOtherReliefs!,
-      allEmployersDeductedApit: answers.allEmployersDeductedApit!,
+      allEmployersDeductedApit: showSalary ? answers.allEmployersDeductedApit! : true,
       hasIrdFile: answers.hasIrdFile!,
       employerCount: emp.length,
       approxInterest: sum(int.map((i) => i.gross)),
@@ -263,7 +282,7 @@ export function useTaxForm() {
     if (pre.status === 'out_of_scope') return pre;
     if (!result) return null;
     return confirmFilingObligation(pre, result);
-  }, [allAnswered, answers, emp, int, biz, result]);
+  }, [allAnswered, answers, emp, int, biz, result, showSalary]);
 
   const outOfScope = obligation?.status === 'out_of_scope';
   const newKey = (prefix: string) => `${prefix}${nextId.current++}`;
@@ -276,15 +295,36 @@ export function useTaxForm() {
   };
 
   const readiness = computeReadiness({
-    answeredCount,
-    totalQuestions: QUESTIONS.length,
+    // picking a profile counts as the first answer
+    answeredCount: answeredCount + (profile ? 1 : 0),
+    totalQuestions: questions.length + 1,
     incomeEntered: emp.length + int.length + biz.length > 0,
     interestSettled: noInterest || int.length > 0,
     checksPassed: !!result && !hasErrors && result.warnings.length === 0,
     hasErrors,
   });
 
+  const setProfile = (id: ProfileId) => {
+    setProfileState(id);
+    // start freelancers with one entry ready to fill
+    if (visibleSections(id, extra).includes('freelance') && businessRows.length === 0)
+      setBusinessRows([newBusinessRow(newKey('b'))]);
+  };
+  const addSection = (x: Section) => {
+    setExtra((e) => (e.includes(x) ? e : [...e, x]));
+    if (x === 'freelance' && businessRows.length === 0) setBusinessRows([newBusinessRow(newKey('b'))]);
+  };
+
   return {
+    profile,
+    setProfile,
+    sections,
+    addable: addableSections(profile, extra),
+    addSection,
+    isExtra: (x: Section) => extra.includes(x) && !visibleSections(profile).includes(x),
+    removeSection: (x: Section) => setExtra((e) => e.filter((y) => y !== x)),
+    questions,
+
     answers,
     setAnswer: (id: keyof Answers, v: boolean) => setAnswers((a) => ({ ...a, [id]: v })),
     answeredCount,

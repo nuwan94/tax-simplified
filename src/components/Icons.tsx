@@ -65,3 +65,33 @@ export const XIcon = () => (
     <path d="M18 6 6 18M6 6l12 12" />
   </svg>
 );
+
+// Larger icons for the profile cards.
+const big = { ...base, width: 26, height: 26, strokeWidth: 1.6 };
+
+export const BriefcaseIcon = () => (
+  <svg {...big}>
+    <rect x="3" y="7" width="18" height="13" rx="2" />
+    <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18" />
+  </svg>
+);
+
+export const GlobeIcon = () => (
+  <svg {...big}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+  </svg>
+);
+
+export const LaptopIcon = () => (
+  <svg {...big}>
+    <rect x="4" y="5" width="16" height="11" rx="1.5" />
+    <path d="M2 19h20" />
+  </svg>
+);
+
+export const BankIcon = () => (
+  <svg {...big}>
+    <path d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" />
+  </svg>
+);

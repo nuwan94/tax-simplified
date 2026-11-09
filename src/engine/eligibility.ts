@@ -43,8 +43,10 @@ export function assessEligibility(a: EligibilityAnswers): Eligibility {
   if (a.hasIrdFile) reasons.push('IRD has opened a tax file for you, so you must file until it is closed.');
   const business = (a.businessCount ?? 0) > 0;
   if (business) reasons.push('You have freelance or business income, which is not taxed through APIT.');
-  if (a.employerCount === 0 && !business) reasons.push('You have interest income without employment income under APIT.');
-  if (a.employerCount > 0 && !a.allEmployersDeductedApit) reasons.push('Not all of your employment income had APIT deducted.');
+  if (a.employerCount === 0 && !business)
+    reasons.push('You have interest income without employment income under APIT.');
+  if (a.employerCount > 0 && !a.allEmployersDeductedApit)
+    reasons.push('Not all of your employment income had APIT deducted.');
   if (a.approxInterest > NO_RETURN_INTEREST_LIMIT) {
     reasons.push(`Your interest is more than Rs ${NO_RETURN_INTEREST_LIMIT.toLocaleString('en-LK')}.`);
   }
@@ -52,7 +54,9 @@ export function assessEligibility(a: EligibilityAnswers): Eligibility {
 
   return {
     status: 'likely_no_return',
-    reasons: ['Your only income is salary taxed through APIT, and interest is within the limit. We will confirm after your figures.'],
+    reasons: [
+      'Your only income is salary taxed through APIT, and interest is within the limit. We will confirm after your figures.',
+    ],
   };
 }
 
@@ -69,9 +73,12 @@ export function confirmFilingObligation(e: Eligibility, r: CalculationResult): F
   if (e.status !== 'likely_no_return') return e;
 
   const reasons: string[] = [];
-  if (r.returnType === 'standard') reasons.push('You have freelance or business income, which is not taxed through APIT.');
+  if (r.returnType === 'standard')
+    reasons.push('You have freelance or business income, which is not taxed through APIT.');
   if (r.interestIncome > NO_RETURN_INTEREST_LIMIT) {
-    reasons.push(`Your certificates show interest of Rs ${r.interestIncome.toLocaleString('en-LK')}, above the Rs 5,000 limit.`);
+    reasons.push(
+      `Your certificates show interest of Rs ${r.interestIncome.toLocaleString('en-LK')}, above the Rs 5,000 limit.`,
+    );
   }
   if (r.balance > 0) reasons.push('Your tax is more than what was deducted, so you have a balance to pay.');
   if (r.balance < 0) reasons.push('More tax was deducted than you owe. File a return to claim the refund.');
@@ -79,6 +86,8 @@ export function confirmFilingObligation(e: Eligibility, r: CalculationResult): F
 
   return {
     status: 'no_return_needed',
-    reasons: ['Your salary was fully taxed through APIT and nothing is owed either way. You do not need to file unless IRD asks you to.'],
+    reasons: [
+      'Your salary was fully taxed through APIT and nothing is owed either way. You do not need to file unless IRD asks you to.',
+    ],
   };
 }

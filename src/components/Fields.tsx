@@ -1,6 +1,7 @@
 // Shared form cells for the ledger-style sections.
 
-import { Hint } from './Hint';
+import { Hint, WithHint } from './Hint';
+import { XIcon } from './Icons';
 import type { TopicId } from './explainers';
 
 export function Cell({ label, children }: { label: string; children: React.ReactNode }) {
@@ -46,5 +47,29 @@ export function AmountCell(props: {
       </span>
       {error ? <span className="field-error">{error}</span> : hint && <span className="field-hint">{hint}</span>}
     </div>
+  );
+}
+
+/** Heading strip for one section of the sheet. Sections the person added themselves can be removed. */
+export function SectionHead(props: {
+  id: string;
+  title: string;
+  topic?: TopicId;
+  meta?: string;
+  onRemove?: () => void;
+}) {
+  const { id, title, topic, meta, onRemove } = props;
+  return (
+    <header className="part-head">
+      <h2 id={id}>{topic ? <WithHint text={title} topic={topic} /> : title}</h2>
+      <span className="part-head-end">
+        {meta && <span className="part-meta">{meta}</span>}
+        {onRemove && (
+          <button type="button" className="icon-btn" aria-label={`Remove ${title.toLowerCase()}`} onClick={onRemove}>
+            <XIcon />
+          </button>
+        )}
+      </span>
+    </header>
   );
 }

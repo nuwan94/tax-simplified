@@ -3,7 +3,15 @@ import type { CalculationInput, EmploymentInput, InterestInput } from '../src/in
 const manual = { method: 'manual' } as const;
 
 export function job(gross: number, apit: number, opts: Partial<EmploymentInput> = {}): EmploymentInput {
-  return { id: opts.id ?? `emp-${gross}-${apit}`, employerName: 'Employer', isPrimary: true, gross, apit, source: manual, ...opts };
+  return {
+    id: opts.id ?? `emp-${gross}-${apit}`,
+    employerName: 'Employer',
+    isPrimary: true,
+    gross,
+    apit,
+    source: manual,
+    ...opts,
+  };
 }
 
 export function fd(gross: number, ait: number, opts: Partial<InterestInput> = {}): InterestInput {

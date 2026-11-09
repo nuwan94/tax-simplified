@@ -44,9 +44,6 @@ export function computeReadiness(s: {
       done: s.checksPassed,
     },
   ];
-  const percent = Math.round(
-    (s.answeredCount / total) * 25 + items.slice(1).filter((i) => i.done).length * 25,
-  );
+  const percent = Math.round((s.answeredCount / total) * 25 + items.slice(1).filter((i) => i.done).length * 25);
   return { percent, items };
 }
-

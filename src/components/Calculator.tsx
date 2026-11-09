@@ -3,22 +3,14 @@
 import type { CalculationResult, FilingObligation } from '@/index';
 import { formatLKR, formatSigned } from '@/lib/money';
 import { Readiness } from './Readiness';
-import { AmountCell, Cell } from './Fields';
-import { FreelanceParts } from './FreelanceParts';
+import { AmountCell, Cell, SectionHead } from './Fields';
+import { FreelanceSection, PaidSection } from './FreelanceParts';
+import { ProfilePicker, SomethingElse } from './Profiles';
+import type { Section } from '@/lib/profiles';
 import { TaxLadder } from './TaxLadder';
 import { Hint, WithHint } from './Hint';
 import { AlertIcon, CalendarIcon, CheckIcon, InfoIcon, PlusIcon, PrinterIcon, XIcon } from './Icons';
-import {
-  OUT_OF_SCOPE_TEXT,
-  QUESTIONS,
-  daysUntil,
-  fmt,
-  headlineLabel,
-  rules,
-  shortDate,
-  sum,
-  useTaxForm,
-} from './useTaxForm';
+import { OUT_OF_SCOPE_TEXT, daysUntil, fmt, headlineLabel, rules, shortDate, sum, useTaxForm } from './useTaxForm';
 
 export function Calculator() {
   const form = useTaxForm();
@@ -27,6 +19,7 @@ export function Calculator() {
     setAnswer,
     answeredCount,
     allAnswered,
+    questions,
     employers,
     updateEmployer: updEmp,
     addEmployer,
@@ -46,100 +39,142 @@ export function Calculator() {
     noInterest,
     setNoInterest,
     readiness,
+    profile,
+    sections,
   } = form;
+  const removeIf = (s: Section) => (form.isExtra(s) ? () => form.removeSection(s) : undefined);
 
-  return (
-    <div className="calc">
-      <div className="sheet">
-        {/* Part A */}
-        <section className="part" aria-labelledby="part-a">
-          <header className="part-head">
-            <h2 id="part-a">
-              <span className="part-code">Part A</span> Your situation
-            </h2>
-            <span className="part-meta">
-              {answeredCount} of {QUESTIONS.length} answered
+  const salary = (
+    <section key="salary" className="part" aria-labelledby="sec-salary">
+      <SectionHead id="sec-salary" title="Salary" topic="employment" meta="Schedule 1" onRemove={removeIf('salary')} />
+      <div className="ledger" role="table" aria-label="Employment income">
+        <div className="ledger-row ledger-header" role="row">
+          <span role="columnheader">Employer</span>
+          <span role="columnheader" className="num">
+            Gross remuneration
+          </span>
+          <span role="columnheader" className="num">
+            <WithHint text="APIT deducted" topic="apit" />
+          </span>
+          <span role="columnheader" aria-label="Actions" />
+        </div>
+        {employers.map((r, i) => (
+          <div key={r.key} className="ledger-row" role="row">
+            <Cell label="Employer">
+              <input
+                type="text"
+                autoComplete="off"
+                placeholder={i === 0 ? 'Main employer' : 'Second employer'}
+                value={r.name}
+                onChange={(e) => updEmp(r.key, { name: e.target.value })}
+                aria-label={`Employer ${i + 1} name`}
+              />
+              <span className="tag-line">{i === 0 ? 'Primary employment' : 'Secondary employment'}</span>
+            </Cell>
+            <AmountCell
+              label="Gross remuneration"
+              value={r.gross}
+              error={errors[`${r.key}.gross`]}
+              onChange={(v) => updEmp(r.key, { gross: v })}
+            />
+            <AmountCell
+              label="APIT deducted"
+              topic="apit"
+              value={r.apit}
+              error={errors[`${r.key}.apit`]}
+              onChange={(v) => updEmp(r.key, { apit: v })}
+            />
+            <span className="ledger-actions" role="cell">
+              {i > 0 && (
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label={`Remove employer ${i + 1}`}
+                  onClick={() => removeEmployer(r.key)}
+                >
+                  <XIcon />
+                </button>
+              )}
             </span>
-          </header>
-          <div className="qlist">
-            {QUESTIONS.map((q, n) => (
-              <fieldset key={q.id} className="q">
-                <span className="q-no">A{n + 1}</span>
-                <div className="q-text">
-                  <legend>
-                    <WithHint text={q.text} topic={q.hint} />
-                  </legend>
-                </div>
-                <div className="seg" role="radiogroup" aria-label={q.text}>
-                  {[true, false].map((v) => (
-                    <label key={String(v)} className={answers[q.id] === v ? 'on' : ''}>
-                      <input
-                        type="radio"
-                        name={q.id}
-                        checked={answers[q.id] === v}
-                        onChange={() => setAnswer(q.id, v)}
-                      />
-                      {v ? 'Yes' : 'No'}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-            ))}
           </div>
-        </section>
+        ))}
+        {employers.length > 1 && (
+          <div className="ledger-row ledger-total" role="row">
+            <span role="cell">Total</span>
+            <span role="cell" className="num">
+              {fmt(sum(emp.map((e) => e.gross)))}
+            </span>
+            <span role="cell" className="num">
+              {fmt(sum(emp.map((e) => e.apit)))}
+            </span>
+            <span role="cell" />
+          </div>
+        )}
+      </div>
+      <button type="button" className="btn-secondary" onClick={addEmployer}>
+        <PlusIcon /> Add employer
+      </button>
+    </section>
+  );
 
-        {/* Part B */}
-        <section className="part" aria-labelledby="part-b">
-          <header className="part-head">
-            <h2 id="part-b">
-              <span className="part-code">Part B</span> <WithHint text="Employment income" topic="employment" />
-            </h2>
-            <span className="part-meta">Schedule 1</span>
-          </header>
-          <div className="ledger" role="table" aria-label="Employment income">
+  const interest = (
+    <section key="interest" className="part" aria-labelledby="sec-interest">
+      <SectionHead
+        id="sec-interest"
+        title="Bank interest"
+        topic="interest"
+        meta="Schedules 3 & 7"
+        onRemove={removeIf('interest')}
+      />
+      <label className="check">
+        <input type="checkbox" checked={noInterest} onChange={(e) => setNoInterest(e.target.checked)} />
+        <span>I had no bank interest this year</span>
+      </label>
+      {!noInterest && (
+        <>
+          <div className="ledger" role="table" aria-label="Interest income">
             <div className="ledger-row ledger-header" role="row">
-              <span role="columnheader">Employer</span>
+              <span role="columnheader">Bank or finance company</span>
               <span role="columnheader" className="num">
-                Gross remuneration
+                Gross interest
               </span>
               <span role="columnheader" className="num">
-                <WithHint text="APIT deducted" topic="apit" />
+                <WithHint text="AIT / WHT deducted" topic="interest" />
               </span>
               <span role="columnheader" aria-label="Actions" />
             </div>
-            {employers.map((r, i) => (
+            {interests.map((r, i) => (
               <div key={r.key} className="ledger-row" role="row">
-                <Cell label="Employer">
+                <Cell label="Bank or finance company">
                   <input
                     type="text"
                     autoComplete="off"
-                    placeholder={i === 0 ? 'Main employer' : 'Second employer'}
+                    placeholder={`Bank ${i + 1}`}
                     value={r.name}
-                    onChange={(e) => updEmp(r.key, { name: e.target.value })}
-                    aria-label={`Employer ${i + 1} name`}
+                    onChange={(e) => updInt(r.key, { name: e.target.value })}
+                    aria-label={`Bank ${i + 1} name`}
                   />
-                  <span className="tag-line">{i === 0 ? 'Primary employment' : 'Secondary employment'}</span>
                 </Cell>
                 <AmountCell
-                  label="Gross remuneration"
+                  label="Gross interest"
                   value={r.gross}
                   error={errors[`${r.key}.gross`]}
-                  onChange={(v) => updEmp(r.key, { gross: v })}
+                  onChange={(v) => updInt(r.key, { gross: v })}
                 />
                 <AmountCell
-                  label="APIT deducted"
-                  topic="apit"
-                  value={r.apit}
-                  error={errors[`${r.key}.apit`]}
-                  onChange={(v) => updEmp(r.key, { apit: v })}
+                  label="AIT / WHT deducted"
+                  topic="interest"
+                  value={r.tax}
+                  error={errors[`${r.key}.tax`]}
+                  onChange={(v) => updInt(r.key, { tax: v })}
                 />
                 <span className="ledger-actions" role="cell">
-                  {i > 0 && (
+                  {interests.length > 1 && (
                     <button
                       type="button"
                       className="icon-btn"
-                      aria-label={`Remove employer ${i + 1}`}
-                      onClick={() => removeEmployer(r.key)}
+                      aria-label={`Remove bank ${i + 1}`}
+                      onClick={() => removeInterest(r.key)}
                     >
                       <XIcon />
                     </button>
@@ -147,105 +182,76 @@ export function Calculator() {
                 </span>
               </div>
             ))}
-            <div className="ledger-row ledger-total" role="row">
-              <span role="cell">Total</span>
-              <span role="cell" className="num">
-                {fmt(sum(emp.map((e) => e.gross)))}
-              </span>
-              <span role="cell" className="num">
-                {fmt(sum(emp.map((e) => e.apit)))}
-              </span>
-              <span role="cell" />
-            </div>
-          </div>
-          <button type="button" className="btn-secondary" onClick={addEmployer}>
-            <PlusIcon /> Add employer
-          </button>
-        </section>
-
-        {/* Part C */}
-        <section className="part" aria-labelledby="part-c">
-          <header className="part-head">
-            <h2 id="part-c">
-              <span className="part-code">Part C</span> <WithHint text="Interest income" topic="interest" />
-            </h2>
-            <span className="part-meta">Schedules 3 &amp; 7</span>
-          </header>
-          <label className="check">
-            <input type="checkbox" checked={noInterest} onChange={(e) => setNoInterest(e.target.checked)} />
-            <span>I had no bank interest this year</span>
-          </label>
-          {!noInterest && (
-            <>
-              <div className="ledger" role="table" aria-label="Interest income">
-                <div className="ledger-row ledger-header" role="row">
-                  <span role="columnheader">Bank or finance company</span>
-                  <span role="columnheader" className="num">
-                    Gross interest
-                  </span>
-                  <span role="columnheader" className="num">
-                    <WithHint text="AIT / WHT deducted" topic="interest" />
-                  </span>
-                  <span role="columnheader" aria-label="Actions" />
-                </div>
-                {interests.map((r, i) => (
-                  <div key={r.key} className="ledger-row" role="row">
-                    <Cell label="Bank or finance company">
-                      <input
-                        type="text"
-                        autoComplete="off"
-                        placeholder={`Bank ${i + 1}`}
-                        value={r.name}
-                        onChange={(e) => updInt(r.key, { name: e.target.value })}
-                        aria-label={`Bank ${i + 1} name`}
-                      />
-                    </Cell>
-                    <AmountCell
-                      label="Gross interest"
-                      value={r.gross}
-                      error={errors[`${r.key}.gross`]}
-                      onChange={(v) => updInt(r.key, { gross: v })}
-                    />
-                    <AmountCell
-                      label="AIT / WHT deducted"
-                      topic="interest"
-                      value={r.tax}
-                      error={errors[`${r.key}.tax`]}
-                      onChange={(v) => updInt(r.key, { tax: v })}
-                    />
-                    <span className="ledger-actions" role="cell">
-                      {interests.length > 1 && (
-                        <button
-                          type="button"
-                          className="icon-btn"
-                          aria-label={`Remove bank ${i + 1}`}
-                          onClick={() => removeInterest(r.key)}
-                        >
-                          <XIcon />
-                        </button>
-                      )}
-                    </span>
-                  </div>
-                ))}
-                <div className="ledger-row ledger-total" role="row">
-                  <span role="cell">Total</span>
-                  <span role="cell" className="num">
-                    {fmt(sum(int.map((i) => i.gross)))}
-                  </span>
-                  <span role="cell" className="num">
-                    {fmt(sum(int.map((i) => i.ait)))}
-                  </span>
-                  <span role="cell" />
-                </div>
+            {interests.length > 1 && (
+              <div className="ledger-row ledger-total" role="row">
+                <span role="cell">Total</span>
+                <span role="cell" className="num">
+                  {fmt(sum(int.map((i) => i.gross)))}
+                </span>
+                <span role="cell" className="num">
+                  {fmt(sum(int.map((i) => i.ait)))}
+                </span>
+                <span role="cell" />
               </div>
-              <button type="button" className="btn-secondary" onClick={addInterest}>
-                <PlusIcon /> Add bank
-              </button>
-            </>
-          )}
-        </section>
+            )}
+          </div>
+          <button type="button" className="btn-secondary" onClick={addInterest}>
+            <PlusIcon /> Add bank
+          </button>
+        </>
+      )}
+    </section>
+  );
 
-        <FreelanceParts f={form} />
+  const block: Record<Section, React.ReactNode> = {
+    salary,
+    interest,
+    freelance: <FreelanceSection key="freelance" f={form} />,
+    paid: <PaidSection key="paid" f={form} />,
+  };
+
+  return (
+    <div className="calc">
+      <div className="sheet">
+        <ProfilePicker f={form} />
+
+        {sections.map((s) => block[s])}
+
+        {profile && (
+          <section className="part" aria-labelledby="sec-checks">
+            <SectionHead
+              id="sec-checks"
+              title="A few checks"
+              meta={`${answeredCount} of ${questions.length} answered`}
+            />
+            <div className="qlist">
+              {questions.map((q) => (
+                <fieldset key={q.id} className="q">
+                  <div className="q-text">
+                    <legend>
+                      <WithHint text={q.text} topic={q.hint} />
+                    </legend>
+                  </div>
+                  <div className="seg" role="radiogroup" aria-label={q.text}>
+                    {[true, false].map((v) => (
+                      <label key={String(v)} className={answers[q.id] === v ? 'on' : ''}>
+                        <input
+                          type="radio"
+                          name={q.id}
+                          checked={answers[q.id] === v}
+                          onChange={() => setAnswer(q.id, v)}
+                        />
+                        {v ? 'Yes' : 'No'}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <SomethingElse f={form} />
       </div>
 
       <aside className="calc-result">
@@ -256,6 +262,7 @@ export function Calculator() {
             obligation={obligation}
             allAnswered={allAnswered}
             hasErrors={hasErrors}
+            hasProfile={!!profile}
             today={today}
           />
         </div>
@@ -280,9 +287,10 @@ function ResultPanel(props: {
   obligation: FilingObligation | null;
   allAnswered: boolean;
   hasErrors: boolean;
+  hasProfile: boolean;
   today: Date | null;
 }) {
-  const { result, obligation, allAnswered, hasErrors, today } = props;
+  const { result, obligation, allAnswered, hasErrors, hasProfile, today } = props;
 
   if (obligation?.status === 'out_of_scope') {
     return (
@@ -318,7 +326,9 @@ function ResultPanel(props: {
           <p className="muted">
             {hasErrors
               ? 'Rupee amounts must be whole numbers, for example 1,250,000. Dollar amounts can have cents.'
-              : 'Enter your salary or bank interest. The computation updates as you type.'}
+              : hasProfile
+                ? 'Enter your figures. The computation updates as you type.'
+                : 'Pick what describes you to start.'}
           </p>
         </div>
       </div>
@@ -351,7 +361,7 @@ function ResultPanel(props: {
           </dt>
           <dd>
             {!allAnswered || !obligation ? (
-              <span className="muted">Complete Part A</span>
+              <span className="muted">Answer the checks</span>
             ) : mustFile ? (
               <span className="status-pill warn">
                 Required · {result.returnType === 'standard' ? 'Standard' : 'Simplified'} Return

@@ -21,7 +21,7 @@ const mono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: 'Tax Simplified — Sri Lanka income tax calculator',
   description:
-    'Work out your Sri Lankan income tax for YA 2025/26 from your salary and bank interest. Find out if you need to file, what you owe or what you can claim back. Runs entirely in your browser.',
+    'Work out your Sri Lankan income tax for YA 2025/26 from salary, freelance or foreign income and bank interest. Find out if you need to file, what you owe or what you can claim back. Runs entirely in your browser.',
 };
 
 export const viewport: Viewport = {

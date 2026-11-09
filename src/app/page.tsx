@@ -29,9 +29,8 @@ export default function Home() {
           <div>
             <h1>Income tax calculator</h1>
             <p className="lede">
-              For residents with salary and bank interest. Enter the figures from your employer&rsquo;s APIT certificate
-              and your banks&rsquo; interest certificates to see whether you need to file and what you owe or can claim
-              back.
+              For Sri Lankan residents with a salary, freelance or foreign income, or bank interest. Pick what describes
+              you, enter your figures, and see whether you need to file and what you owe or can claim back.
             </p>
           </div>
           <dl className="facts">
