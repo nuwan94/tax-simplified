@@ -14,7 +14,7 @@ import {
   type OutOfScopeReason,
 } from '@/index';
 import { parseAmount, parseCents } from '@/lib/money';
-import { peggedSplit, summarizeMonths, type PayMonth } from '@/lib/payslips';
+import { payFor, peggedSplit, summarizeMonths, type PayChange, type PayMonth } from '@/lib/payslips';
 import { convertMonthly, getFxRates, parseForeignAmount, yaMonths, type Conversion } from '@/lib/fx';
 import { addableSections, visibleSections, type ProfileId, type Section } from '@/lib/profiles';
 import type { TopicId } from './explainers';
@@ -56,8 +56,12 @@ export interface EmployerRow {
   pegged: boolean;
   /** Rupees per US dollar used for the basic salary (often 200). */
   peg: string;
-  /** Usual month: US dollars when pegged, otherwise rupees. Used by "Fill all months". */
-  usual: string;
+  /** Pegged: whether the basic salary is entered in rupees or US dollars. */
+  basicIn: 'LKR' | 'USD';
+  /** Pay rate from a month onwards: the starting pay, then each raise or promotion. */
+  changes: { from: string; amount: string }[];
+  /** Last month worked for this employer (YYYY-MM). */
+  lastMonth: string;
   months: Record<string, PayRow>;
 }
 
@@ -71,7 +75,9 @@ export const newEmployerRow = (key: string, source: EmployerRow['source'] = 'pay
   apit: '',
   pegged: false,
   peg: '200',
-  usual: '',
+  basicIn: 'LKR',
+  changes: [{ from: '2025-04', amount: '' }],
+  lastMonth: '2026-03',
   months: {},
 });
 
@@ -203,26 +209,38 @@ function parseRows(
   employers.forEach((r, i) => {
     if (r.source !== 'payslips') return;
     const peg = r.pegged ? (cents(`${r.key}.peg`, r.peg) ?? 0) : 0;
+    const changes: PayChange[] = [];
+    r.changes.forEach((c, ci) => {
+      const amount = cents(`${r.key}.c.${ci}`, c.amount);
+      if (amount !== undefined) changes.push({ from: c.from, amount });
+    });
     const months: PayMonth[] = [];
     for (const m of MONTHS) {
-      const row = r.months[m];
-      if (!row || !filled(...Object.values(row))) continue;
+      const row = { ...emptyPayRow(), ...r.months[m] };
+      const typed = filled(row.basic, row.allowance, row.regular, row.extra, row.apit);
+      const rate = payFor(m, changes, r.lastMonth);
+      if (!typed && rate === undefined) continue;
       const k = (f: string) => `${r.key}.p.${m}.${f}`;
       const extra = cents(k('extra'), row.extra) ?? 0;
       const apit = cents(k('apit'), row.apit);
-      let regular = 0;
-      let regularEstimated = false;
       if (r.pegged) {
-        const usd = cents(k('usd'), row.usd) ?? 0;
-        const auto = peggedSplit(usd, peg, usdRates.monthly[m]?.average ?? peg);
-        const basic = cents(k('basic'), row.basic) ?? auto.basic;
+        const fromRate = rate === undefined ? undefined : r.basicIn === 'USD' ? rate * peg : rate;
+        const basic = cents(k('basic'), row.basic) ?? fromRate ?? 0;
+        const auto = peggedSplit(peg ? basic / peg : 0, peg, usdRates.monthly[m]?.average ?? peg);
         const allowance = cents(k('allowance'), row.allowance);
-        regularEstimated = allowance === undefined && auto.allowance > 0;
-        regular = basic + (allowance ?? auto.allowance);
+        months.push({
+          month: m,
+          regular: basic + (allowance ?? auto.allowance),
+          extra,
+          apit,
+          regularEstimated: allowance === undefined && auto.allowance > 0,
+          basic,
+          allowance: allowance ?? auto.allowance,
+        });
       } else {
-        regular = cents(k('regular'), row.regular) ?? 0;
+        const regular = cents(k('regular'), row.regular) ?? rate ?? 0;
+        months.push({ month: m, regular, extra, apit });
       }
-      months.push({ month: m, regular, extra, apit, regularEstimated });
     }
     // APIT can only be estimated for the main job; other employers use different tables.
     payslips[r.key] = summarizeMonths(months, payRules, i === 0);
@@ -327,13 +345,37 @@ function restore(raw: unknown): SavedForm {
     profile: d.profile ?? null,
     extra: Array.isArray(d.extra) ? d.extra : [],
     answers: { ...BLANK_ANSWERS, ...(d.answers ?? {}) },
-    employers: employers.map((e) => ({ ...newEmployerRow(e.key, e.gross || e.apit ? 't10' : 'payslips'), ...e })),
+    employers: employers.map(migrateEmployer),
     interests:
       Array.isArray(d.interests) && d.interests.length ? d.interests : [{ key: 'i1', name: '', gross: '', tax: '' }],
     businessRows: Array.isArray(d.businessRows) ? d.businessRows.map((b) => ({ ...newBusinessRow(b.key), ...b })) : [],
     instalments: d.instalments ?? '',
     noInterest: !!d.noInterest,
   };
+}
+
+/** Brings an employer saved by an earlier version up to date. */
+function migrateEmployer(e: EmployerRow & { usual?: string }): EmployerRow {
+  const base = newEmployerRow(e.key, e.gross || e.apit ? 't10' : 'payslips');
+  const { usual, ...rest } = e;
+  const r: EmployerRow = { ...base, ...rest };
+  // earlier versions took pegged pay as US dollars per month: keep it as the basic in rupees
+  const peg = Number(r.peg) || 0;
+  const months: Record<string, PayRow> = {};
+  for (const [m, row] of Object.entries(r.months ?? {})) {
+    const usd = Number(String(row.usd ?? '').replace(/[\s,$]/g, ''));
+    months[m] = {
+      ...emptyPayRow(),
+      ...row,
+      ...(r.pegged && !row.basic && usd ? { basic: String(+(usd * peg).toFixed(2)), usd: '' } : {}),
+    };
+  }
+  r.months = months;
+  if (usual && !r.changes.some((c) => c.amount)) {
+    r.changes = [{ from: MONTHS[0]!, amount: usual }];
+    if (r.pegged) r.basicIn = 'USD';
+  }
+  return r;
 }
 
 /** Next free number for row keys like "e3", "b12". */
@@ -481,38 +523,6 @@ export function useTaxForm(initial?: unknown, onSave?: (data: SavedForm) => void
             ? { ...x, months: { ...x.months, [month]: { ...emptyPayRow(), ...x.months[month], ...patch } } }
             : x,
         ),
-      ),
-    /** Copy one month's regular pay into later months that have no regular pay yet. */
-    copyPayDown: (key: string, month: string) =>
-      setEmployers((rs) =>
-        rs.map((x) => {
-          if (x.key !== key) return x;
-          const src = x.months[month];
-          if (!src) return x;
-          const months = { ...x.months };
-          for (const m of MONTHS.filter((m) => m > month)) {
-            const cur = { ...emptyPayRow(), ...months[m] };
-            if (x.pegged ? cur.usd || cur.basic : cur.regular) continue;
-            months[m] = x.pegged
-              ? { ...cur, usd: src.usd, basic: src.basic, allowance: '' }
-              : { ...cur, regular: src.regular };
-          }
-          return { ...x, months };
-        }),
-      ),
-    /** Put the usual monthly amount into every month that is still empty. */
-    fillAllMonths: (key: string) =>
-      setEmployers((rs) =>
-        rs.map((x) => {
-          if (x.key !== key || !x.usual.trim()) return x;
-          const months = { ...x.months };
-          for (const m of MONTHS) {
-            const cur = { ...emptyPayRow(), ...months[m] };
-            if (x.pegged ? cur.usd || cur.basic : cur.regular) continue;
-            months[m] = x.pegged ? { ...cur, usd: x.usual } : { ...cur, regular: x.usual };
-          }
-          return { ...x, months };
-        }),
       ),
     removeEmployer: (key: string) => setEmployers((rs) => rs.filter((x) => x.key !== key)),
 

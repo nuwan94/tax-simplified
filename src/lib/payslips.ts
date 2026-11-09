@@ -56,6 +56,9 @@ export interface PayMonth {
   apit?: number;
   /** True when part of `regular` is an estimate (for example a pegged allowance not typed in). */
   regularEstimated?: boolean;
+  /** Pegged salaries: the basic and allowance that make up `regular`. */
+  basic?: number;
+  allowance?: number;
 }
 
 export interface PayMonthResult extends PayMonth {
@@ -91,4 +94,23 @@ export function summarizeMonths(months: PayMonth[], r: PayRules, estimateApit = 
     estimatedApitMonths: rows.filter((x) => x.apitEstimated).length,
     estimatedPayMonths: rows.filter((x) => x.regularEstimated).length,
   };
+}
+
+/** A pay rate that applies from `from` (YYYY-MM) until the next change. */
+export interface PayChange {
+  from: string;
+  amount: number;
+}
+
+/**
+ * The pay rate for `month` from a list of changes (start of job, promotions, raises),
+ * or undefined before the first change or after `lastMonth`.
+ */
+export function payFor(month: string, changes: PayChange[], lastMonth?: string): number | undefined {
+  if (lastMonth && month > lastMonth) return undefined;
+  let amount: number | undefined;
+  for (const c of [...changes].sort((a, b) => a.from.localeCompare(b.from))) {
+    if (c.from <= month) amount = c.amount;
+  }
+  return amount;
 }

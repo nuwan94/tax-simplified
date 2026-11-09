@@ -1,17 +1,12 @@
 'use client';
 
 import { monthLabel } from '@/lib/fx';
-import { peggedSplit } from '@/lib/payslips';
 import { AmountCell, Cell, SectionHead } from './Fields';
 import { Hint, WithHint } from './Hint';
 import { PlusIcon, XIcon } from './Icons';
-import { MONTHS, emptyPayRow, usdRates, type EmployerRow, type PayRow, type TaxForm } from './useTaxForm';
+import { MONTHS, emptyPayRow, type EmployerRow, type PayRow, type TaxForm } from './useTaxForm';
 
 const money = (n: number) => n.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const num = (s: string) => {
-  const n = Number(s.replace(/[\s,]/g, '').replace(/^rs\.?|^\$|^usd/i, ''));
-  return Number.isFinite(n) ? n : 0;
-};
 
 /** Salary: one card per employer, entered from a T-10 certificate or month by month from payslips. */
 export function SalarySection({ f, onRemove }: { f: TaxForm; onRemove?: () => void }) {
@@ -97,38 +92,7 @@ function EmployerCard({ f, r, i }: { f: TaxForm; r: EmployerRow; i: number }) {
             </span>
           </label>
 
-          <div className="pay-usual">
-            {r.pegged && (
-              <label className="mini-field">
-                <span>Peg rate (Rs per $)</span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={r.peg}
-                  onChange={(e) => upd({ peg: e.target.value })}
-                  aria-invalid={!!f.errors[`${r.key}.peg`]}
-                />
-              </label>
-            )}
-            <label className="mini-field">
-              <span>{r.pegged ? 'Monthly salary (USD)' : 'Monthly pay'}</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder={r.pegged ? '$ 2,000' : 'Rs 250,000'}
-                value={r.usual}
-                onChange={(e) => upd({ usual: e.target.value })}
-              />
-            </label>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => f.fillAllMonths(r.key)}
-              disabled={!r.usual.trim()}
-            >
-              Fill empty months
-            </button>
-          </div>
+          <PayChanges f={f} r={r} />
 
           <div className="pay-wrap">
             <PayMonths f={f} r={r} primary={i === 0} />
@@ -156,16 +120,122 @@ function EmployerCard({ f, r, i }: { f: TaxForm; r: EmployerRow; i: number }) {
   );
 }
 
+/** Pay rate over the year: the starting pay, then each raise or promotion, and the last month worked. */
+function PayChanges({ f, r }: { f: TaxForm; r: EmployerRow }) {
+  const upd = (patch: Partial<EmployerRow>) => f.updateEmployer(r.key, patch);
+  const setChange = (ci: number, patch: Partial<EmployerRow['changes'][number]>) =>
+    upd({ changes: r.changes.map((c, j) => (j === ci ? { ...c, ...patch } : c)) });
+  const used = new Set(r.changes.map((c) => c.from));
+  const nextFree = MONTHS.find((m) => m > (r.changes.at(-1)?.from ?? '') && !used.has(m));
+  const unit = r.pegged && r.basicIn === 'USD' ? '$' : 'Rs';
+
+  return (
+    <div className="pay-changes">
+      <div className="pay-changes-head">
+        <span className="mini-head">{r.pegged ? 'Basic salary' : 'Monthly pay'}</span>
+        {r.pegged && (
+          <>
+            <div className="seg small" role="radiogroup" aria-label="Basic salary in">
+              {(['LKR', 'USD'] as const).map((c) => (
+                <label key={c} className={r.basicIn === c ? 'on' : ''}>
+                  <input
+                    type="radio"
+                    name={`${r.key}-basic-in`}
+                    checked={r.basicIn === c}
+                    onChange={() => upd({ basicIn: c })}
+                  />
+                  {c === 'LKR' ? 'Rs' : 'USD'}
+                </label>
+              ))}
+            </div>
+            <label className="mini-field inline">
+              <span>Peg</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={r.peg}
+                onChange={(e) => upd({ peg: e.target.value })}
+                aria-label="Peg rate, rupees per US dollar"
+                aria-invalid={!!f.errors[`${r.key}.peg`]}
+              />
+            </label>
+          </>
+        )}
+      </div>
+
+      {r.changes.map((c, ci) => {
+        const err = f.errors[`${r.key}.c.${ci}`];
+        return (
+          <div key={ci} className={`pay-change${err ? ' has-error' : ''}`}>
+            <label className="mini-field">
+              <span>{ci === 0 ? 'From' : 'Changed in'}</span>
+              <select value={c.from} onChange={(e) => setChange(ci, { from: e.target.value })}>
+                {MONTHS.map((m) => (
+                  <option key={m} value={m} disabled={m !== c.from && used.has(m)}>
+                    {monthLabel(m)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="mini-field grow">
+              <span>{unit}</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                value={c.amount}
+                onChange={(e) => setChange(ci, { amount: e.target.value })}
+                aria-label={`${r.pegged ? 'Basic salary' : 'Monthly pay'} from ${monthLabel(c.from)}`}
+                aria-invalid={!!err}
+              />
+            </label>
+            {ci > 0 && (
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label={`Remove pay change in ${monthLabel(c.from)}`}
+                onClick={() => upd({ changes: r.changes.filter((_, j) => j !== ci) })}
+              >
+                <XIcon />
+              </button>
+            )}
+            {err && <span className="field-error">{err}</span>}
+          </div>
+        );
+      })}
+
+      <div className="pay-changes-foot">
+        {nextFree && (
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => upd({ changes: [...r.changes, { from: nextFree, amount: '' }] })}
+          >
+            + Pay change
+          </button>
+        )}
+        <label className="mini-field inline">
+          <span>Until</span>
+          <select value={r.lastMonth} onChange={(e) => upd({ lastMonth: e.target.value })}>
+            {MONTHS.map((m) => (
+              <option key={m} value={m}>
+                {monthLabel(m)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </div>
+  );
+}
+
 /** Twelve payslip rows. Grey placeholders are worked out; typing replaces them. */
 function PayMonths({ f, r, primary }: { f: TaxForm; r: EmployerRow; primary: boolean }) {
   const sum = f.payslips[r.key];
   const byMonth = new Map(sum?.rows.map((x) => [x.month, x]));
-  const peg = num(r.peg);
-  const cols = r.pegged
-    ? (['usd', 'basic', 'allowance', 'extra', 'apit'] as const)
-    : (['regular', 'extra', 'apit'] as const);
+  const cols = r.pegged ? (['basic', 'allowance', 'extra', 'apit'] as const) : (['regular', 'extra', 'apit'] as const);
   const LABEL: Record<keyof PayRow, string> = {
-    usd: 'USD salary',
+    usd: 'USD',
     basic: 'Basic',
     allowance: 'Allowances',
     regular: 'Monthly pay',
@@ -186,31 +256,21 @@ function PayMonths({ f, r, primary }: { f: TaxForm; r: EmployerRow; primary: boo
           Gross
         </span>
       </div>
-      {MONTHS.map((m, idx) => {
+      {MONTHS.map((m) => {
         const row = { ...emptyPayRow(), ...r.months[m] };
         const res = byMonth.get(m);
-        const usd = num(row.usd);
-        const auto = r.pegged ? peggedSplit(usd, peg, usdRates.monthly[m]?.average ?? peg) : null;
-        const placeholder: Partial<Record<keyof PayRow, string>> = {
-          basic: auto && usd ? money(auto.basic) : '',
-          allowance: auto && usd ? money(auto.allowance) : '',
-          apit: res && primary ? money(res.expectedApit) : '',
-        };
-        const hasRegular = r.pegged ? !!(row.usd || row.basic) : !!row.regular;
+        const placeholder: Partial<Record<keyof PayRow, string>> = res
+          ? {
+              basic: res.basic !== undefined ? money(res.basic) : '',
+              allowance: res.allowance !== undefined ? money(res.allowance) : '',
+              regular: money(res.regular),
+              apit: primary ? money(res.expectedApit) : '',
+            }
+          : {};
         return (
           <div key={m} className="pay-row" role="row">
             <span role="cell" className="pay-month">
               <b>{monthLabel(m)}</b>
-              {hasRegular && idx < MONTHS.length - 1 && (
-                <button
-                  type="button"
-                  className="link-btn small"
-                  onClick={() => f.copyPayDown(r.key, m)}
-                  aria-label={`Copy ${monthLabel(m)} pay to the following empty months`}
-                >
-                  Copy down
-                </button>
-              )}
             </span>
             {cols.map((c) => {
               const err = f.errors[`${r.key}.p.${m}.${c}`];
@@ -223,7 +283,7 @@ function PayMonths({ f, r, primary }: { f: TaxForm; r: EmployerRow; primary: boo
                     inputMode="decimal"
                     autoComplete="off"
                     value={row[c]}
-                    placeholder={placeholder[c] || (c === 'usd' ? '$' : '')}
+                    placeholder={placeholder[c] ?? ''}
                     onChange={(e) => f.updatePayMonth(r.key, m, { [c]: e.target.value })}
                     aria-label={`${LABEL[c]}, ${monthLabel(m)}`}
                     aria-invalid={!!err}

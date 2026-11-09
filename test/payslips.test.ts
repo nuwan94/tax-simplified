@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { getRules } from '../src/index.ts';
-import { annualTax, apitLumpSum, apitMonthly, peggedSplit, summarizeMonths } from '../src/lib/payslips.ts';
+import { annualTax, apitLumpSum, apitMonthly, payFor, peggedSplit, summarizeMonths } from '../src/lib/payslips.ts';
 
 const rules = getRules('2025/2026');
 const r = { relief: rules.reliefs.personal.amount, bands: rules.progressiveRates.bands };
@@ -66,5 +66,23 @@ describe('summarizing payslip months', () => {
   it('flags a payslip APIT that differs from the tables', () => {
     assert.equal(s.rows[0]!.apitDiffers, false);
     assert.equal(s.rows[2]!.apitDiffers, true);
+  });
+});
+
+describe('pay changes during the year', () => {
+  const changes = [
+    { from: '2025-09', amount: 450_000 },
+    { from: '2025-04', amount: 400_000 },
+  ];
+  it('uses the latest change on or before the month', () => {
+    assert.equal(payFor('2025-04', changes), 400_000);
+    assert.equal(payFor('2025-08', changes), 400_000);
+    assert.equal(payFor('2025-09', changes), 450_000);
+    assert.equal(payFor('2026-03', changes), 450_000);
+  });
+  it('is empty before the job started and after it ended', () => {
+    assert.equal(payFor('2025-06', [{ from: '2025-07', amount: 1 }]), undefined);
+    assert.equal(payFor('2026-01', changes, '2025-12'), undefined);
+    assert.equal(payFor('2025-12', changes, '2025-12'), 450_000);
   });
 });

@@ -1449,17 +1449,6 @@ button {
 }
 
 /* ---------- payslips by month ---------- */
-.pay-usual {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin: 4px 0 12px;
-}
-.pay-usual .mini-field input {
-  width: 170px;
-  font-family: var(--font-figures);
-}
 .pay-wrap {
   container-type: inline-size;
 }
@@ -1470,7 +1459,7 @@ button {
   background: var(--surface);
 }
 .pay-months.pegged {
-  --pay-cols: 84px repeat(5, minmax(0, 1fr)) 110px;
+  --pay-cols: 84px repeat(4, minmax(0, 1fr)) 110px;
 }
 .pay-row {
   display: grid;
@@ -1589,7 +1578,7 @@ button {
     text-align: left;
   }
 }
-@container (max-width: 820px) {
+@container (max-width: 680px) {
   .pay-months.pegged .pay-head {
     display: none;
   }
@@ -1619,4 +1608,70 @@ button {
   .pay-months.pegged .pay-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* pay rate over the year */
+.pay-changes {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.pay-changes-head,
+.pay-changes-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pay-changes-foot {
+  justify-content: space-between;
+}
+.mini-head {
+  font-weight: 700;
+}
+.pay-change {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pay-change .mini-field.grow {
+  flex: 1 1 160px;
+}
+.pay-change .mini-field.grow input {
+  width: 100%;
+  font-family: var(--font-figures);
+  text-align: right;
+}
+.pay-change .field-error {
+  flex-basis: 100%;
+}
+.mini-field select {
+  min-height: 40px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+}
+.mini-field.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.mini-field.inline input {
+  width: 72px;
+  font-family: var(--font-figures);
+}
+.seg.small label {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
 }
