@@ -1,7 +1,17 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { getRules } from '../src/index.ts';
-import { annualTax, apitLumpSum, apitMonthly, payFor, peggedSplit, summarizeMonths } from '../src/lib/payslips.ts';
+import {
+  annualTax,
+  apitLumpSum,
+  apitMonthly,
+  monthsWorked,
+  payFor,
+  peggedSplit,
+  summarizeMonths,
+  tidyPeriod,
+} from '../src/lib/payslips.ts';
+import { yaMonths } from '../src/lib/fx.ts';
 
 const rules = getRules('2025/2026');
 const r = { relief: rules.reliefs.personal.amount, bands: rules.progressiveRates.bands };
@@ -84,5 +94,35 @@ describe('pay changes during the year', () => {
     assert.equal(payFor('2025-06', [{ from: '2025-07', amount: 1 }]), undefined);
     assert.equal(payFor('2026-01', changes, '2025-12'), undefined);
     assert.equal(payFor('2025-12', changes, '2025-12'), 450_000);
+  });
+});
+
+describe('period worked', () => {
+  const months = yaMonths('2025/2026');
+  it('lists only the months from the start to the last month', () => {
+    assert.deepEqual(monthsWorked(months, { changes: [{ from: '2025-06' }], lastMonth: '2025-09' }), [
+      '2025-06',
+      '2025-07',
+      '2025-08',
+      '2025-09',
+    ]);
+    assert.equal(monthsWorked(months, { changes: [{ from: '2025-04' }], lastMonth: '2026-03' }).length, 12);
+  });
+
+  it('moves the last month up to the start and drops pay changes outside the period', () => {
+    const p = {
+      changes: [
+        { from: '2025-04', amount: '1' },
+        { from: '2025-10', amount: '2' },
+        { from: '2026-02', amount: '3' },
+      ],
+      lastMonth: '2025-12',
+    };
+    assert.deepEqual(
+      tidyPeriod(p, '2025-04').changes.map((c) => c.from),
+      ['2025-04', '2025-10'],
+    );
+    const late = tidyPeriod({ ...p, changes: [{ from: '2026-01', amount: '1' }] }, '2025-04');
+    assert.equal(late.lastMonth, '2026-01');
   });
 });

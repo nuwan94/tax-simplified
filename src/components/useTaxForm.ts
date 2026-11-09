@@ -14,7 +14,15 @@ import {
   type OutOfScopeReason,
 } from '@/index';
 import { parseAmount, parseCents } from '@/lib/money';
-import { payFor, peggedSplit, summarizeMonths, type PayChange, type PayMonth } from '@/lib/payslips';
+import {
+  monthsWorked,
+  payFor,
+  peggedSplit,
+  summarizeMonths,
+  tidyPeriod,
+  type PayChange,
+  type PayMonth,
+} from '@/lib/payslips';
 import { convertMonthly, getFxRates, hasFxRates, parseForeignAmount, yaMonths, type Conversion } from '@/lib/fx';
 import { addableSections, visibleSections, type ProfileId, type Section } from '@/lib/profiles';
 import type { TopicId } from './explainers';
@@ -82,6 +90,12 @@ export const newEmployerRow = (key: string, source: EmployerRow['source'] = 'pay
 });
 
 export type PaySummary = ReturnType<typeof summarizeMonths>;
+
+/** Months worked for an employer: from the first pay rate's month to the last month worked. */
+export const workedMonths = (r: Pick<EmployerRow, 'changes' | 'lastMonth'>) => monthsWorked(MONTHS, r);
+
+/** Keeps an employer's start, pay changes and last month in order after an edit. */
+export const tidyDates = (r: EmployerRow): EmployerRow => tidyPeriod(r, MONTHS[0]!);
 
 /** Everything needed to restore the form for one person. */
 export interface SavedForm {
@@ -233,7 +247,8 @@ function parseRows(
       if (amount !== undefined) changes.push({ from: c.from, amount });
     });
     const months: PayMonth[] = [];
-    for (const m of MONTHS) {
+    // months outside the period worked are hidden, so they don't count
+    for (const m of workedMonths(r)) {
       const row = { ...emptyPayRow(), ...r.months[m] };
       const typed = filled(row.basic, row.allowance, row.regular, row.extra, row.apit);
       const rate = payFor(m, changes, r.lastMonth);
@@ -459,15 +474,18 @@ export function useTaxForm(initial?: unknown, onSave?: (data: SavedForm) => void
   const showInterest = has('interest');
   const showFreelance = has('freelance');
   const showPaid = has('paid');
+  // "No bank interest": an explicit answer, so "none" differs from "not entered yet".
+  // The rows are kept but left out, so unticking brings them back.
+  const [noInterest, setNoInterest] = useState(init.noInterest);
   const { emp, int, biz, instalmentsPaid, conversions, expenses, payslips, errors } = useMemo(
     () =>
       parseRows(
         showSalary ? employers : [],
-        showInterest ? interests : [],
+        showInterest && !noInterest ? interests : [],
         showFreelance ? businessRows : [],
         showPaid ? instalments : '',
       ),
-    [employers, interests, businessRows, instalments, showSalary, showInterest, showFreelance, showPaid],
+    [employers, interests, businessRows, instalments, showSalary, showInterest, noInterest, showFreelance, showPaid],
   );
   const hasErrors = Object.keys(errors).length > 0;
 
@@ -517,13 +535,6 @@ export function useTaxForm(initial?: unknown, onSave?: (data: SavedForm) => void
 
   const outOfScope = obligation?.status === 'out_of_scope';
   const newKey = (prefix: string) => `${prefix}${nextId.current++}`;
-
-  // "No bank interest": an explicit answer, so "none" differs from "not entered yet".
-  const [noInterest, setNoInterestState] = useState(init.noInterest);
-  const setNoInterest = (on: boolean) => {
-    setNoInterestState(on);
-    if (on) setInterests([{ key: newKey('i'), name: '', gross: '', tax: '' }]);
-  };
 
   // Save after each change (debounced). Skips the first render, which is the restored state.
   const saveRef = useRef(onSave);
@@ -582,7 +593,7 @@ export function useTaxForm(initial?: unknown, onSave?: (data: SavedForm) => void
 
     employers,
     updateEmployer: (key: string, patch: Partial<EmployerRow>) =>
-      setEmployers((rs) => rs.map((x) => (x.key === key ? { ...x, ...patch } : x))),
+      setEmployers((rs) => rs.map((x) => (x.key === key ? tidyDates({ ...x, ...patch }) : x))),
     addEmployer: () => setEmployers((rs) => [...rs, newEmployerRow(newKey('e'))]),
     /** Update one month's payslip fields. */
     updatePayMonth: (key: string, month: string, patch: Partial<PayRow>) =>

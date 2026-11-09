@@ -114,3 +114,26 @@ export function payFor(month: string, changes: PayChange[], lastMonth?: string):
   }
   return amount;
 }
+
+/** A job's period: pay changes (the first is the start) and the last month worked. */
+export interface WorkPeriod {
+  changes: { from: string }[];
+  lastMonth: string;
+}
+
+/** The months of `months` from the start of the job to its last month. */
+export function monthsWorked(months: string[], p: WorkPeriod): string[] {
+  const start = p.changes[0]?.from ?? months[0] ?? '';
+  return months.filter((m) => m >= start && m <= p.lastMonth);
+}
+
+/**
+ * Keeps a period consistent after an edit: the last month is never before the start, and later
+ * pay changes stay after the start and by the last month (others are dropped).
+ */
+export function tidyPeriod<T extends WorkPeriod>(p: T, firstMonth: string): T {
+  const start = p.changes[0]?.from ?? firstMonth;
+  const lastMonth = p.lastMonth < start ? start : p.lastMonth;
+  const changes = p.changes.filter((c, i) => i === 0 || (c.from > start && c.from <= lastMonth));
+  return { ...p, lastMonth, changes };
+}

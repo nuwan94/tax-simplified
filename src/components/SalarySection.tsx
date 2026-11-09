@@ -4,7 +4,7 @@ import { monthLabel } from '@/lib/fx';
 import { AmountCell, Cell, SectionHead } from './Fields';
 import { Hint, WithHint } from './Hint';
 import { PlusIcon, XIcon } from './Icons';
-import { MONTHS, emptyPayRow, type EmployerRow, type PayRow, type TaxForm } from './useTaxForm';
+import { MONTHS, emptyPayRow, workedMonths, type EmployerRow, type PayRow, type TaxForm } from './useTaxForm';
 
 const money = (n: number) => n.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -108,7 +108,11 @@ function EmployerCard({ f, r, i }: { f: TaxForm; r: EmployerRow; i: number }) {
                 <span>APIT deducted</span>
                 <span className="num">{money(sum.apit)}</span>
               </div>
-              {sum.rows.length < 12 && <p className="pay-flag">{sum.rows.length} of 12 months</p>}
+              {sum.rows.length < 12 && (
+                <p className="pay-flag">
+                  {sum.rows.length} {sum.rows.length === 1 ? 'month' : 'months'}
+                </p>
+              )}
               {(sum.estimatedApitMonths > 0 || sum.estimatedPayMonths > 0) && (
                 <p className="pay-flag">Grey figures are estimates.</p>
               )}
@@ -126,7 +130,10 @@ function PayChanges({ f, r }: { f: TaxForm; r: EmployerRow }) {
   const setChange = (ci: number, patch: Partial<EmployerRow['changes'][number]>) =>
     upd({ changes: r.changes.map((c, j) => (j === ci ? { ...c, ...patch } : c)) });
   const used = new Set(r.changes.map((c) => c.from));
-  const nextFree = MONTHS.find((m) => m > (r.changes.at(-1)?.from ?? '') && !used.has(m));
+  const start = r.changes[0]?.from ?? MONTHS[0]!;
+  const nextFree = MONTHS.find((m) => m > (r.changes.at(-1)?.from ?? '') && m <= r.lastMonth && !used.has(m));
+  // the first row can start any month; later changes fall after it and by the last month worked
+  const choices = (ci: number) => (ci === 0 ? MONTHS : MONTHS.filter((m) => m > start && m <= r.lastMonth));
   const unit = r.pegged && r.basicIn === 'USD' ? '$' : 'Rs';
 
   return (
@@ -170,7 +177,7 @@ function PayChanges({ f, r }: { f: TaxForm; r: EmployerRow }) {
             <label className="mini-field">
               <span>{ci === 0 ? 'From' : 'Changed in'}</span>
               <select value={c.from} onChange={(e) => setChange(ci, { from: e.target.value })}>
-                {MONTHS.map((m) => (
+                {choices(ci).map((m) => (
                   <option key={m} value={m} disabled={m !== c.from && used.has(m)}>
                     {monthLabel(m)}
                   </option>
@@ -217,7 +224,7 @@ function PayChanges({ f, r }: { f: TaxForm; r: EmployerRow }) {
         <label className="mini-field inline">
           <span>Until</span>
           <select value={r.lastMonth} onChange={(e) => upd({ lastMonth: e.target.value })}>
-            {MONTHS.map((m) => (
+            {MONTHS.filter((m) => m >= start).map((m) => (
               <option key={m} value={m}>
                 {monthLabel(m)}
               </option>
@@ -229,7 +236,7 @@ function PayChanges({ f, r }: { f: TaxForm; r: EmployerRow }) {
   );
 }
 
-/** Twelve payslip rows. Grey placeholders are worked out; typing replaces them. */
+/** One payslip row per month worked. Grey placeholders are worked out; typing replaces them. */
 function PayMonths({ f, r, primary }: { f: TaxForm; r: EmployerRow; primary: boolean }) {
   const sum = f.payslips[r.key];
   const byMonth = new Map(sum?.rows.map((x) => [x.month, x]));
@@ -256,7 +263,7 @@ function PayMonths({ f, r, primary }: { f: TaxForm; r: EmployerRow; primary: boo
           Gross
         </span>
       </div>
-      {MONTHS.map((m) => {
+      {workedMonths(r).map((m) => {
         const row = { ...emptyPayRow(), ...r.months[m] };
         const res = byMonth.get(m);
         const placeholder: Partial<Record<keyof PayRow, string>> = res
