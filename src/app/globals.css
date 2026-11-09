@@ -1171,16 +1171,19 @@ button {
   padding: 16px 0 32px;
 }
 
-/* ---------- print ---------- */
+/* ---------- print: the result summary only ---------- */
 
 @media print {
   .topbar,
+  .page-head,
   .notice-local,
-  .btn-secondary,
-  .icon-btn,
+  .people,
+  .sheet,
   .statement-actions,
   .mobile-bar,
-  .skip {
+  .site-footer,
+  .skip,
+  .hint {
     display: none !important;
   }
   body {
@@ -1190,15 +1193,22 @@ button {
   .calc {
     display: block;
   }
-  .sheet,
+  .calc-result {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
   .statement {
-    break-inside: avoid;
-    margin-bottom: 16px;
+    box-shadow: none;
   }
   .statement-head {
     background: #fff;
     color: #000;
     border-bottom: 2px solid #000;
+  }
+  .ladder,
+  .computation {
+    break-inside: avoid;
   }
 }
 

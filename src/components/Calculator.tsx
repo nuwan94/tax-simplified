@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import type { CalculationResult, FilingObligation } from '@/index';
 import { formatLKR, formatSigned } from '@/lib/money';
 import { AmountCell, Cell, SectionHead } from './Fields';
@@ -10,6 +12,8 @@ import type { Section } from '@/lib/profiles';
 import { TaxLadder } from './TaxLadder';
 import { Hint, WithHint } from './Hint';
 import { AlertIcon, CalendarIcon, CheckIcon, InfoIcon, PlusIcon, PrinterIcon, XIcon } from './Icons';
+import { buildSummary, summaryFileName } from '@/lib/summary';
+import { YA } from './useTaxForm';
 import {
   OUT_OF_SCOPE_TEXT,
   daysUntil,
@@ -22,8 +26,31 @@ import {
   type SavedForm,
 } from './useTaxForm';
 
-export function Calculator({ initial, onSave }: { initial?: unknown; onSave?: (data: SavedForm) => void } = {}) {
+export function Calculator({
+  initial,
+  onSave,
+  person = '',
+}: { initial?: unknown; onSave?: (data: SavedForm) => void; person?: string } = {}) {
   const form = useTaxForm(initial, onSave);
+
+  // The PDF library loads only when someone asks for the summary.
+  const downloadPdf = async () => {
+    if (!form.result) return;
+    const doc = buildSummary({
+      person,
+      ya: YA,
+      rules,
+      result: form.result,
+      obligation: form.allAnswered ? form.obligation : null,
+      employments: form.emp,
+      payslips: form.payslips,
+      interests: form.int,
+      businesses: form.biz,
+      now: new Date(),
+    });
+    const { downloadSummaryPdf } = await import('@/lib/summaryPdf');
+    await downloadSummaryPdf(doc, summaryFileName(person, YA));
+  };
   const {
     answers,
     setAnswer,
@@ -184,6 +211,7 @@ export function Calculator({ initial, onSave }: { initial?: unknown; onSave?: (d
       <aside className="calc-result">
         <div id="result" aria-live="polite">
           <ResultPanel
+            onDownload={downloadPdf}
             result={outOfScope ? null : result}
             obligation={obligation}
             allAnswered={allAnswered}
@@ -217,8 +245,10 @@ function ResultPanel(props: {
   hasProfile: boolean;
   apitEstimatedMonths: number;
   today: Date | null;
+  onDownload: () => Promise<void>;
 }) {
-  const { result, obligation, allAnswered, hasErrors, hasProfile, apitEstimatedMonths, today } = props;
+  const { result, obligation, allAnswered, hasErrors, hasProfile, apitEstimatedMonths, today, onDownload } = props;
+  const [pdfState, setPdfState] = useState<'idle' | 'busy' | 'failed'>('idle');
 
   if (obligation?.status === 'out_of_scope') {
     return (
@@ -396,9 +426,23 @@ function ResultPanel(props: {
       <p className="fineprint">IRD guide 2025/26, Annexures 1 and 7.</p>
 
       <div className="statement-actions">
-        <button type="button" className="btn-primary" onClick={() => window.print()}>
-          <PrinterIcon /> Print or save as PDF
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={pdfState === 'busy'}
+          onClick={async () => {
+            setPdfState('busy');
+            try {
+              await onDownload();
+              setPdfState('idle');
+            } catch {
+              setPdfState('failed');
+            }
+          }}
+        >
+          <PrinterIcon /> {pdfState === 'busy' ? 'Preparing PDF…' : 'Download PDF summary'}
         </button>
+        {pdfState === 'failed' && <p className="field-error">Couldn&rsquo;t create the PDF. Try again.</p>}
       </div>
     </div>
   );

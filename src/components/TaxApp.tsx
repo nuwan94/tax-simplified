@@ -53,7 +53,7 @@ export function TaxApp() {
   return (
     <>
       <PeopleBar store={store} saved={saved} onChange={commit} />
-      <Calculator key={person.id} initial={person.data} onSave={save(person.id)} />
+      <Calculator key={person.id} initial={person.data} onSave={save(person.id)} person={person.name} />
     </>
   );
 }
