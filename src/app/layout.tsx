@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Mono, Source_Serif_4 } from 'next/font/google';
 import './globals.css';
 import './explain.css';
+import { SITE, SITE_URL } from '@/lib/site';
 
 // Paper theme: a book-style serif for reading, a typewriter-ledger mono for figures.
 const serif = Source_Serif_4({
@@ -19,9 +20,37 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Tax Simplified — Sri Lanka income tax calculator',
-  description:
-    'Work out your Sri Lankan income tax for YA 2025/26 from salary, freelance or foreign income and bank interest. Find out if you need to file, what you owe or what you can claim back. Runs entirely in your browser.',
+  metadataBase: new URL(SITE_URL),
+  title: { default: `${SITE.title} | ${SITE.name}`, template: `%s | ${SITE.name}` },
+  description: SITE.description,
+  applicationName: SITE.name,
+  authors: [SITE.author],
+  creator: SITE.author.name,
+  keywords: [
+    'Sri Lanka income tax calculator',
+    'income tax 2025/26',
+    'APIT calculator',
+    'IRD Sri Lanka',
+    'RAMIS tax return',
+    'freelance tax Sri Lanka',
+    'foreign income 15% tax',
+    'pegged salary USD',
+    'T-10 certificate',
+    'personal income tax Sri Lanka',
+  ],
+  category: 'finance',
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    url: '/',
+    siteName: SITE.name,
+    locale: 'en_LK',
+    title: SITE.title,
+    description: SITE.description,
+  },
+  twitter: { card: 'summary_large_image', title: SITE.title, description: SITE.description },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large' } },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {

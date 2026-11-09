@@ -1685,3 +1685,35 @@ button {
   padding: 0 12px;
   font-size: 14px;
 }
+
+/* ---------- questions ---------- */
+.faq {
+  max-width: 760px;
+  margin: 8px 0 40px;
+}
+.faq h2 {
+  font-size: 20px;
+  color: var(--primary);
+  margin: 0 0 8px;
+}
+.faq details {
+  border-top: 1px solid var(--line);
+}
+.faq details:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.faq summary {
+  min-height: 44px;
+  padding: 10px 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+.faq p {
+  margin: 0 0 14px;
+  color: var(--text);
+}
+@media print {
+  .faq {
+    display: none;
+  }
+}

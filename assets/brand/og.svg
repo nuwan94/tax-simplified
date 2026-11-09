@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f3eee3"/>
+  <rect x="0" y="0" width="1200" height="10" fill="#1f3d6d"/>
+
+  <!-- mark -->
+  <g transform="translate(80 78) scale(1.25)">
+    <rect width="64" height="64" rx="14" fill="#1f3d6d"/>
+    <rect x="13" y="14" width="38" height="5" rx="2.5" fill="#f3eee3" fill-opacity="0.5"/>
+    <rect x="13" y="25" width="30" height="5" rx="2.5" fill="#f3eee3" fill-opacity="0.5"/>
+    <rect x="25" y="38" width="26" height="5" rx="2.5" fill="#f3eee3"/>
+    <rect x="25" y="47" width="26" height="5" rx="2.5" fill="#d8a84a"/>
+  </g>
+  <text x="182" y="132" font-family="Georgia, 'Times New Roman', serif" font-size="34" fill="#2a251e">Tax <tspan font-style="italic">Simplified</tspan></text>
+
+  <!-- headline -->
+  <text font-family="Georgia, 'Times New Roman', serif" font-weight="700" fill="#1f3d6d">
+    <tspan x="80" y="262" font-size="68">Sri Lanka income</tspan>
+    <tspan x="80" y="342" font-size="68">tax calculator</tspan>
+  </text>
+  <text x="80" y="404" font-family="Georgia, 'Times New Roman', serif" font-size="30" fill="#6b6152">Year of assessment 2025/26</text>
+
+  <text font-family="Georgia, 'Times New Roman', serif" font-size="26" fill="#2a251e">
+    <tspan x="80" y="480">Salary and APIT from payslips or T-10</tspan>
+    <tspan x="80" y="520">USD freelance income at no more than 15%</tspan>
+    <tspan x="80" y="560">Bank interest, refunds and filing dates</tspan>
+  </text>
+
+  <!-- statement card -->
+  <g transform="translate(760 150)">
+    <rect width="360" height="330" rx="6" fill="#fffcf5" stroke="#b8a988" stroke-width="2"/>
+    <rect width="360" height="58" rx="6" fill="#f2ebdc"/>
+    <rect y="52" width="360" height="6" fill="#f2ebdc"/>
+    <text x="24" y="38" font-family="Georgia, serif" font-size="24" font-weight="700" fill="#2a251e">Tax computation</text>
+    <rect x="24" y="82" width="312" height="96" fill="#fffcf5" stroke="#9b2c2c" stroke-width="2"/>
+    <rect x="24" y="82" width="6" height="96" fill="#9b2c2c"/>
+    <text x="46" y="116" font-family="Georgia, serif" font-size="20" font-weight="700" fill="#9b2c2c">Balance tax payable</text>
+    <text x="46" y="160" font-family="'Courier New', monospace" font-size="38" font-weight="700" fill="#9b2c2c">Rs 450,000</text>
+    <g font-family="'Courier New', monospace" font-size="18" fill="#2a251e">
+      <text x="24" y="222" font-family="Georgia, serif">Taxable income</text>
+      <text x="336" y="222" text-anchor="end">4,800,000</text>
+      <text x="24" y="256" font-family="Georgia, serif">Income tax</text>
+      <text x="336" y="256" text-anchor="end">672,000</text>
+      <text x="24" y="290" font-family="Georgia, serif">Less: APIT</text>
+      <text x="336" y="290" text-anchor="end">(222,000)</text>
+    </g>
+    <rect x="200" y="302" width="136" height="2" fill="#2a251e"/>
+    <rect x="200" y="307" width="136" height="2" fill="#2a251e"/>
+  </g>
+
+  <text x="1120" y="580" text-anchor="end" font-family="Georgia, serif" font-size="24" fill="#1f3d6d">tax.nuwan.dev</text>
+</svg>

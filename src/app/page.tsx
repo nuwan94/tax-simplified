@@ -1,5 +1,51 @@
 import { TaxApp } from '@/components/TaxApp';
 import { LockIcon } from '@/components/Icons';
+import { getRules } from '@/index';
+import { faqs } from '@/lib/faq';
+import { SITE, SITE_URL } from '@/lib/site';
+
+const FAQS = faqs(getRules('2025/2026'));
+
+// Structured data for search and answer engines: the app itself, and the questions answered on the page.
+const JSON_LD = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebApplication',
+      '@id': `${SITE_URL}/#app`,
+      name: SITE.name,
+      alternateName: SITE.title,
+      url: `${SITE_URL}/`,
+      description: SITE.description,
+      applicationCategory: 'FinanceApplication',
+      operatingSystem: 'Any (web browser)',
+      browserRequirements: 'Requires JavaScript',
+      inLanguage: 'en-LK',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'LKR' },
+      areaServed: { '@type': 'Country', name: 'Sri Lanka' },
+      author: { '@type': 'Person', name: SITE.author.name, url: SITE.author.url },
+      image: `${SITE_URL}/opengraph-image.png`,
+      featureList: [
+        'Income tax for year of assessment 2025/26',
+        'Salary and APIT from monthly payslips or the T-10 certificate',
+        'Salaries pegged to US dollars, with pay changes during the year',
+        'Freelance and foreign income converted at CBSL monthly average rates',
+        'Bank interest and AIT credit',
+        'PDF summary',
+      ],
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': `${SITE_URL}/#faq`,
+      mainEntity: FAQS.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    },
+  ],
+};
 export default function Home() {
   return (
     <>
@@ -41,7 +87,18 @@ export default function Home() {
         </p>
 
         <TaxApp />
+
+        <section className="faq" aria-labelledby="faq-h">
+          <h2 id="faq-h">Questions</h2>
+          {FAQS.map((f) => (
+            <details key={f.q}>
+              <summary>{f.q}</summary>
+              <p>{f.a}</p>
+            </details>
+          ))}
+        </section>
       </main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
 
       <footer className="site-footer">
         <div className="wrap">

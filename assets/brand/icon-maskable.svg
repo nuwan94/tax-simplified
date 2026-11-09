@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Full-bleed version for Android adaptive icons: the mark sits inside the 80% safe zone. -->
+  <rect width="64" height="64" fill="#1f3d6d"/>
+  <g transform="translate(6.4 6.4) scale(0.8)">
+    <rect x="13" y="14" width="38" height="5" rx="2.5" fill="#f3eee3" fill-opacity="0.5"/>
+    <rect x="13" y="25" width="30" height="5" rx="2.5" fill="#f3eee3" fill-opacity="0.5"/>
+    <rect x="25" y="38" width="26" height="5" rx="2.5" fill="#f3eee3"/>
+    <rect x="25" y="47" width="26" height="5" rx="2.5" fill="#d8a84a"/>
+  </g>
+</svg>
