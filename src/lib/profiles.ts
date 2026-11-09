@@ -7,25 +7,24 @@ export type ProfileId = 'salaried' | 'mixed' | 'freelancer' | 'savings';
 export interface Profile {
   id: ProfileId;
   title: string;
-  sub: string;
   sections: Section[];
 }
 
 export const PROFILES: Profile[] = [
-  { id: 'salaried', title: 'Salaried', sub: 'A job in Sri Lanka', sections: ['salary', 'interest'] },
+  { id: 'salaried', title: 'Salaried', sections: ['salary', 'interest'] },
   {
     id: 'mixed',
     title: 'Salary + freelance',
-    sub: 'A job, plus side work',
+
     sections: ['salary', 'freelance', 'interest', 'paid'],
   },
   {
     id: 'freelancer',
     title: 'Freelancer',
-    sub: 'Clients or platforms only',
+
     sections: ['freelance', 'interest', 'paid'],
   },
-  { id: 'savings', title: 'Savings only', sub: 'Just bank interest', sections: ['interest'] },
+  { id: 'savings', title: 'Savings only', sections: ['interest'] },
 ];
 
 /** Page order of the income sections. */

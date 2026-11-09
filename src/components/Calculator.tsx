@@ -2,7 +2,6 @@
 
 import type { CalculationResult, FilingObligation } from '@/index';
 import { formatLKR, formatSigned } from '@/lib/money';
-import { Readiness } from './Readiness';
 import { AmountCell, Cell, SectionHead } from './Fields';
 import { FreelanceSection, PaidSection } from './FreelanceParts';
 import { ProfilePicker, SomethingElse } from './Profiles';
@@ -44,7 +43,6 @@ export function Calculator({ initial, onSave }: { initial?: unknown; onSave?: (d
     today,
     noInterest,
     setNoInterest,
-    readiness,
     profile,
     sections,
   } = form;
@@ -61,7 +59,7 @@ export function Calculator({ initial, onSave }: { initial?: unknown; onSave?: (d
       />
       <label className="check">
         <input type="checkbox" checked={noInterest} onChange={(e) => setNoInterest(e.target.checked)} />
-        <span>I had no bank interest this year</span>
+        <span>No bank interest</span>
       </label>
       {!noInterest && (
         <>
@@ -152,11 +150,7 @@ export function Calculator({ initial, onSave }: { initial?: unknown; onSave?: (d
 
         {profile && (
           <section className="part" aria-labelledby="sec-checks">
-            <SectionHead
-              id="sec-checks"
-              title="A few checks"
-              meta={`${answeredCount} of ${questions.length} answered`}
-            />
+            <SectionHead id="sec-checks" title="Checks" meta={`${answeredCount} of ${questions.length} answered`} />
             <div className="qlist">
               {questions.map((q) => (
                 <fieldset key={q.id} className="q">
@@ -188,7 +182,6 @@ export function Calculator({ initial, onSave }: { initial?: unknown; onSave?: (d
       </div>
 
       <aside className="calc-result">
-        <Readiness percent={readiness.percent} items={readiness.items} />
         <div id="result" aria-live="polite">
           <ResultPanel
             result={outOfScope ? null : result}
@@ -258,13 +251,9 @@ function ResultPanel(props: {
         </header>
         <div className="statement-body">
           <p className="empty-title">{hasErrors ? 'Check the highlighted amounts' : 'No figures yet'}</p>
-          <p className="muted">
-            {hasErrors
-              ? 'Rupee amounts must be whole numbers, for example 1,250,000. Dollar amounts can have cents.'
-              : hasProfile
-                ? 'Enter your figures. The computation updates as you type.'
-                : 'Pick what describes you to start.'}
-          </p>
+          {hasErrors && (
+            <p className="muted">Rupee amounts are whole numbers. Dollar and payslip amounts can have cents.</p>
+          )}
         </div>
       </div>
     );
@@ -278,7 +267,7 @@ function ResultPanel(props: {
     <div className="statement">
       <header className="statement-head">
         <h2>Tax computation</h2>
-        <span className="part-meta">YA 2025/26 · Estimate</span>
+        <span className="part-meta">Estimate</span>
       </header>
 
       <div className={`total-box ${result.outcome}`}>
@@ -348,27 +337,18 @@ function ResultPanel(props: {
       )}
       {result.remittanceSaving !== undefined && result.remittanceSaving > 0 && (
         <Note tone="warn" icon={<InfoIcon />}>
-          Foreign income brought in through a Sri Lankan bank in foreign currency is capped at{' '}
-          {Math.round(rules.foreignSourceIncome.maxRate * 100)}%. Doing that would have cut this bill by{' '}
-          <strong>{formatLKR(result.remittanceSaving)}</strong>.
+          Bringing it in through a Sri Lankan bank would save <strong>{formatLKR(result.remittanceSaving)}</strong>.
         </Note>
       )}
       {result.businessIncome > 0 && (
         <Note tone="warn" icon={<CalendarIcon />}>
-          Freelance income isn&rsquo;t taxed at source, so IRD expects quarterly instalments (
-          {rules.payments.instalments.map((i) => shortDate(i.due).replace(/ \d{4}$/, '')).join(', ')}). A missed
-          instalment adds a 10% penalty. <Hint topic="instalments" />
-        </Note>
-      )}
-      {apitEstimatedMonths > 0 && (
-        <Note tone="warn" icon={<InfoIcon />}>
-          APIT for {apitEstimatedMonths} {apitEstimatedMonths === 1 ? 'month' : 'months'} is worked out from the APIT
-          tables, not taken from a payslip. Check it against your payslips or T-10.
+          Instalments due {rules.payments.instalments.map((i) => shortDate(i.due).replace(/ \d{4}$/, '')).join(', ')}.{' '}
+          <Hint topic="instalments" />
         </Note>
       )}
       {result.outcome === 'refund' && (
         <Note tone="ok" icon={<InfoIcon />}>
-          File your return in RAMIS and claim the tax already deducted to get this back.
+          Claim it by filing your return in RAMIS.
         </Note>
       )}
       {filingDays !== null && filingDays < 0 && mustFile && (
@@ -413,10 +393,7 @@ function ResultPanel(props: {
           })}
         </tbody>
       </table>
-      <p className="fineprint">
-        Personal relief Rs 1,800,000; rates 6–36% (IRD guide, Annexures 1 and 7). Tax deducted by banks is a credit for
-        residents, not a final tax.
-      </p>
+      <p className="fineprint">IRD guide 2025/26, Annexures 1 and 7.</p>
 
       <div className="statement-actions">
         <button type="button" className="btn-primary" onClick={() => window.print()}>

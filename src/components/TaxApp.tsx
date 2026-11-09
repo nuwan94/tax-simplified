@@ -131,13 +131,7 @@ function PeopleBar({ store, saved, onChange }: { store: Store; saved: boolean | 
         </form>
       ) : (
         <p className="people-status">
-          <span>
-            {saved === false
-              ? 'This browser isn’t saving, so figures will be lost when you close the page.'
-              : updated
-                ? `${person.name}’s figures are saved in this browser · ${updated}`
-                : `Figures save automatically in this browser as you type.`}
-          </span>
+          <span>{saved === false ? 'Not saving in this browser' : updated ? `Saved ${updated}` : ''}</span>
           <span className="people-actions">
             <button
               type="button"

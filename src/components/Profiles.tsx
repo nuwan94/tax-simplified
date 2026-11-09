@@ -17,7 +17,6 @@ export function ProfilePicker({ f }: { f: TaxForm }) {
     <section className="part" aria-labelledby="sec-profile">
       <header className="part-head">
         <h2 id="sec-profile">Your income for 2025/26</h2>
-        <span className="part-meta">1 Apr 2025 – 31 Mar 2026</span>
       </header>
       <fieldset className="profiles">
         <legend>Which describes you best?</legend>
@@ -32,16 +31,10 @@ export function ProfilePicker({ f }: { f: TaxForm }) {
                   <Icon />
                 </span>
                 <span className="profile-title">{p.title}</span>
-                <span className="profile-sub">{p.sub}</span>
               </label>
             );
           })}
         </div>
-        {!f.profile && (
-          <p className="profile-note">
-            You can add anything else later, and switch at any time without losing what you typed.
-          </p>
-        )}
       </fieldset>
     </section>
   );

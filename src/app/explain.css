@@ -77,13 +77,6 @@ html:has(.explain[open]) {
   justify-content: space-between;
   gap: 12px;
 }
-.explain-kicker {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
 .explain h2 {
   margin: 2px 0 0;
   font-size: 21px;
@@ -103,7 +96,7 @@ html:has(.explain[open]) {
 }
 .explain-scene figcaption {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
@@ -130,12 +123,9 @@ html:has(.explain[open]) {
 .explain-where {
   margin: 0 0 10px;
   padding: 10px 12px;
-  border-left: 3px solid var(--line-strong);
+  border-radius: var(--radius);
   background: var(--sheet-2);
   font-size: 15px;
-}
-.explain-example {
-  border-left-color: #b07f22;
 }
 .explain-actions {
   display: flex;
@@ -199,7 +189,7 @@ html:has(.explain[open]) {
 .scene .a-pop {
   transform-box: fill-box;
   transform-origin: center;
-  animation: ex-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) var(--d, 0s) both;
+  animation: ex-pop 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 0s) both;
 }
 .scene .a-draw {
   stroke-dasharray: 1;

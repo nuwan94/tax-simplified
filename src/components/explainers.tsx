@@ -1059,7 +1059,6 @@ function BonusScene() {
 
 export interface Topic {
   title: string;
-  caption: string;
   scene: () => ReactNode;
   body: ReactNode;
   example?: ReactNode;
@@ -1069,7 +1068,6 @@ export interface Topic {
 export const TOPICS = {
   resident: {
     title: 'Are you a resident?',
-    caption: 'Count the days you were in Sri Lanka between April and March.',
     scene: ResidentScene,
     body: (
       <>
@@ -1084,7 +1082,6 @@ export const TOPICS = {
   },
   otherIncome: {
     title: 'Other kinds of income',
-    caption: 'This calculator handles the green ones. The others need the full return.',
     scene: OtherIncomeScene,
     body: (
       <>
@@ -1101,7 +1098,6 @@ export const TOPICS = {
   },
   reliefs: {
     title: 'Reliefs: income that isn’t taxed',
-    caption: 'Everyone gets the personal relief. Extra reliefs are claimed separately.',
     scene: ReliefsScene,
     body: (
       <>
@@ -1118,7 +1114,6 @@ export const TOPICS = {
   },
   apit: {
     title: 'What is APIT?',
-    caption: 'Your employer takes the tax out of your salary and pays it to IRD.',
     scene: ApitScene,
     body: (
       <>
@@ -1136,7 +1131,6 @@ export const TOPICS = {
   },
   irdFile: {
     title: 'Your IRD tax file',
-    caption: 'Registering gives you a Taxpayer Identification Number (TIN).',
     scene: IrdFileScene,
     body: (
       <>
@@ -1153,7 +1147,6 @@ export const TOPICS = {
   },
   employment: {
     title: 'Salary from your employer',
-    caption: 'Copy two numbers from each employer’s APIT certificate.',
     scene: EmploymentScene,
     body: (
       <>
@@ -1171,7 +1164,6 @@ export const TOPICS = {
   },
   interest: {
     title: 'Bank interest and AIT',
-    caption: `Banks keep back ${AIT} of your interest and send it to IRD.`,
     scene: InterestScene,
     body: (
       <>
@@ -1192,7 +1184,6 @@ export const TOPICS = {
   },
   freelance: {
     title: 'Freelance and foreign income',
-    caption: 'Add a separate entry for each client or platform.',
     scene: FreelanceScene,
     body: (
       <>
@@ -1209,7 +1200,6 @@ export const TOPICS = {
   },
   clientLocation: {
     title: 'Where is your client?',
-    caption: 'What matters is where the person paying you is based.',
     scene: ClientLocationScene,
     body: (
       <>
@@ -1226,7 +1216,6 @@ export const TOPICS = {
   },
   remitted: {
     title: 'Brought in through a Sri Lankan bank?',
-    caption: `Dollars that arrive in a Sri Lankan bank are taxed at no more than ${CAP}.`,
     scene: RemittedScene,
     body: (
       <>
@@ -1245,7 +1234,6 @@ export const TOPICS = {
   },
   fxMonthly: {
     title: 'Converting dollars to rupees',
-    caption: 'Each month’s dollars are multiplied by that month’s average rate.',
     scene: FxScene,
     body: (
       <>
@@ -1270,7 +1258,6 @@ export const TOPICS = {
   },
   expenses: {
     title: 'Expenses',
-    caption: 'Costs of doing the work come off before tax is worked out.',
     scene: ExpensesScene,
     body: (
       <>
@@ -1288,7 +1275,6 @@ export const TOPICS = {
   },
   wht: {
     title: 'Tax deducted by a local client (WHT)',
-    caption: `A local client may keep back ${WHT} and pay it to IRD for you.`,
     scene: WhtScene,
     body: (
       <>
@@ -1303,7 +1289,6 @@ export const TOPICS = {
   },
   foreignTax: {
     title: 'Tax paid abroad',
-    caption: 'You get credit for foreign tax, up to the Sri Lankan tax on that income.',
     scene: ForeignTaxScene,
     body: (
       <>
@@ -1320,7 +1305,6 @@ export const TOPICS = {
   },
   instalments: {
     title: 'Quarterly instalments',
-    caption: 'Self-employed people pay tax in four parts during the year.',
     scene: InstalmentsScene,
     body: (
       <>
@@ -1339,7 +1323,6 @@ export const TOPICS = {
   },
   bands: {
     title: 'How the tax rates work',
-    caption: 'Income fills the steps from the bottom. Only each step is taxed at its rate.',
     scene: BandsScene,
     body: (
       <>
@@ -1356,7 +1339,6 @@ export const TOPICS = {
   },
   returnType: {
     title: 'Simplified or Standard Return',
-    caption: 'Which form you file depends on what kinds of income you had.',
     scene: ReturnTypeScene,
     body: (
       <>
@@ -1373,7 +1355,6 @@ export const TOPICS = {
   },
   deadlines: {
     title: 'Key dates',
-    caption: 'Pay what you owe first, then file the return.',
     scene: DeadlinesScene,
     body: (
       <>
@@ -1387,7 +1368,6 @@ export const TOPICS = {
   },
   payslips: {
     title: 'T-10 certificate or payslips?',
-    caption: 'Twelve payslips add up to the same figures as the T-10.',
     scene: PayslipsScene,
     body: (
       <>
@@ -1406,7 +1386,6 @@ export const TOPICS = {
   },
   pegged: {
     title: 'Salaries pegged to US dollars',
-    caption: 'The basic uses the peg rate; an allowance makes up the rest.',
     scene: PeggedScene,
     body: (
       <>
@@ -1426,7 +1405,6 @@ export const TOPICS = {
   },
   bonus: {
     title: 'Bonuses and one-off payments',
-    caption: 'One-off payments are taxed as an extra on top of the year’s regular pay.',
     scene: BonusScene,
     body: (
       <>

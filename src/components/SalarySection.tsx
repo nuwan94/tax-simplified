@@ -34,10 +34,7 @@ function EmployerCard({ f, r, i }: { f: TaxForm; r: EmployerRow; i: number }) {
   return (
     <div className="entry-card">
       <div className="entry-card-head">
-        <strong>
-          {r.name.trim() || `Employer ${i + 1}`}
-          <span className="tag-line"> · {i === 0 ? 'main job' : 'second job'}</span>
-        </strong>
+        <strong>{r.name.trim() || `Employer ${i + 1}`}</strong>
         {i > 0 && (
           <button
             type="button"
@@ -63,13 +60,13 @@ function EmployerCard({ f, r, i }: { f: TaxForm; r: EmployerRow; i: number }) {
 
       <fieldset className="inline-q">
         <legend>
-          <WithHint text="What do you have from this employer?" topic="payslips" />
+          <WithHint text="Enter from" topic="payslips" />
         </legend>
-        <div className="seg" role="radiogroup" aria-label="What do you have from this employer?">
+        <div className="seg" role="radiogroup" aria-label="Enter from">
           {(['payslips', 't10'] as const).map((s) => (
             <label key={s} className={r.source === s ? 'on' : ''}>
               <input type="radio" name={`${r.key}-src`} checked={r.source === s} onChange={() => upd({ source: s })} />
-              {s === 't10' ? 'T-10 certificate' : 'Monthly payslips'}
+              {s === 't10' ? 'T-10' : 'Payslips'}
             </label>
           ))}
         </div>
@@ -78,7 +75,7 @@ function EmployerCard({ f, r, i }: { f: TaxForm; r: EmployerRow; i: number }) {
       {r.source === 't10' ? (
         <div className="pair-2">
           <AmountCell
-            label="Gross remuneration for the year"
+            label="Gross remuneration"
             value={r.gross}
             error={f.errors[`${r.key}.gross`]}
             onChange={(v) => upd({ gross: v })}
@@ -96,7 +93,7 @@ function EmployerCard({ f, r, i }: { f: TaxForm; r: EmployerRow; i: number }) {
           <label className="check">
             <input type="checkbox" checked={r.pegged} onChange={(e) => upd({ pegged: e.target.checked })} />
             <span>
-              Part of my salary is pegged to US dollars <Hint topic="pegged" />
+              Salary pegged to US dollars <Hint topic="pegged" />
             </span>
           </label>
 
@@ -114,7 +111,7 @@ function EmployerCard({ f, r, i }: { f: TaxForm; r: EmployerRow; i: number }) {
               </label>
             )}
             <label className="mini-field">
-              <span>{r.pegged ? 'Usual salary in US dollars' : 'Usual monthly pay (Rs)'}</span>
+              <span>{r.pegged ? 'Monthly salary (USD)' : 'Monthly pay'}</span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -147,23 +144,9 @@ function EmployerCard({ f, r, i }: { f: TaxForm; r: EmployerRow; i: number }) {
                 <span>APIT deducted</span>
                 <span className="num">{money(sum.apit)}</span>
               </div>
-              {sum.rows.length < 12 && (
-                <p className="pay-flag">
-                  {sum.rows.length} of 12 months entered. Add the rest for the full year, unless you started or left
-                  this job during the year.
-                </p>
-              )}
-              {sum.estimatedApitMonths > 0 && (
-                <p className="pay-flag">
-                  APIT for {sum.estimatedApitMonths} {sum.estimatedApitMonths === 1 ? 'month' : 'months'} is worked out
-                  from the APIT tables. Type the payslip figure for an exact answer.
-                </p>
-              )}
-              {sum.estimatedPayMonths > 0 && (
-                <p className="pay-flag">
-                  The allowance for {sum.estimatedPayMonths} {sum.estimatedPayMonths === 1 ? 'month' : 'months'} uses
-                  the CBSL monthly average. Your employer&rsquo;s rate may differ a little.
-                </p>
+              {sum.rows.length < 12 && <p className="pay-flag">{sum.rows.length} of 12 months</p>}
+              {(sum.estimatedApitMonths > 0 || sum.estimatedPayMonths > 0) && (
+                <p className="pay-flag">Grey figures are estimates.</p>
               )}
             </div>
           )}
@@ -231,14 +214,7 @@ function PayMonths({ f, r, primary }: { f: TaxForm; r: EmployerRow; primary: boo
             </span>
             {cols.map((c) => {
               const err = f.errors[`${r.key}.p.${m}.${c}`];
-              const flag =
-                c === 'apit' && res?.apitDiffers
-                  ? `Expected about ${money(res.expectedApit)}`
-                  : c === 'apit' && res?.apitEstimated
-                    ? 'Worked out'
-                    : c === 'allowance' && res?.regularEstimated
-                      ? 'CBSL estimate'
-                      : '';
+              const flag = c === 'apit' && res?.apitDiffers ? `Expected ${money(res.expectedApit)}` : '';
               return (
                 <label key={c} role="cell" className={`pay-cell${err ? ' has-error' : ''}`}>
                   <span className="pay-label">{LABEL[c]}</span>
@@ -252,11 +228,7 @@ function PayMonths({ f, r, primary }: { f: TaxForm; r: EmployerRow; primary: boo
                     aria-label={`${LABEL[c]}, ${monthLabel(m)}`}
                     aria-invalid={!!err}
                   />
-                  {(err || flag) && (
-                    <span className={err ? 'field-error' : c === 'apit' && res?.apitDiffers ? 'pay-warn' : 'pay-note'}>
-                      {err || flag}
-                    </span>
-                  )}
+                  {(err || flag) && <span className={err ? 'field-error' : 'pay-warn'}>{err || flag}</span>}
                 </label>
               );
             })}

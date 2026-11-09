@@ -64,9 +64,6 @@ function MonthlyUsd(props: {
           </b>{' '}
           = <b className="num">Rs {fmt(conversion?.totalLkr ?? 0)}</b>
         </span>
-        <small>
-          At each month&rsquo;s CBSL average rate <Hint topic="fxMonthly" />
-        </small>
       </p>
     </div>
   );
@@ -106,11 +103,11 @@ export function FreelanceSection({ f }: { f: TaxForm }) {
               </button>
             </div>
 
-            <Cell label="Client, platform or work">
+            <Cell label="Client">
               <input
                 type="text"
                 autoComplete="off"
-                placeholder="For example Upwork, or Acme Ltd"
+                placeholder="Upwork"
                 value={r.name}
                 onChange={(e) => f.updateBusiness(r.key, { name: e.target.value })}
                 aria-label={`Freelance income ${i + 1} description`}
@@ -237,7 +234,7 @@ export function PaidSection({ f }: { f: TaxForm }) {
       <SectionHead id="sec-paid" title="Tax already paid" meta="Schedule 9" onRemove={removeIf(f, 'paid')} />
       <div className="single-field">
         <AmountCell
-          label="Quarterly instalments paid for 2025/26"
+          label="Instalments paid"
           topic="instalments"
           value={f.instalments}
           error={f.errors.instalments}

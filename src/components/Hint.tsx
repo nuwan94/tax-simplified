@@ -70,7 +70,6 @@ function Explainer({ topic, onClose }: { topic: TopicId; onClose: () => void }) 
       <div className="explain-card">
         <header className="explain-head">
           <div>
-            <span className="explain-kicker">Explained simply</span>
             <h2 id={titleId}>{t.title}</h2>
           </div>
           <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
@@ -81,7 +80,6 @@ function Explainer({ topic, onClose }: { topic: TopicId; onClose: () => void }) 
         <figure className="explain-scene">
           <Scene key={play} />
           <figcaption>
-            <span>{t.caption}</span>
             <button type="button" className="link-btn" onClick={() => setPlay((n) => n + 1)}>
               Play again
             </button>

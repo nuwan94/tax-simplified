@@ -11,27 +11,13 @@ export default function Home() {
           <span className="wordmark">
             Tax<span>Simplified</span>
           </span>
-          <span className="topbar-meta">Personal income tax · Sri Lanka</span>
         </div>
       </header>
-
-      <div className="subbar">
-        <div className="wrap subbar-inner">
-          <span>Income tax estimate</span>
-          <span className="sep">/</span>
-          <strong>Year of assessment 2025/26</strong>
-          <span className="chip">Beta</span>
-        </div>
-      </div>
 
       <main id="main" className="wrap">
         <section className="page-head">
           <div>
             <h1>Income tax calculator</h1>
-            <p className="lede">
-              For Sri Lankan residents with a salary, freelance or foreign income, or bank interest. Pick what describes
-              you, enter your figures, and see whether you need to file and what you owe or can claim back.
-            </p>
           </div>
           <dl className="facts">
             <div>
@@ -51,11 +37,7 @@ export default function Home() {
 
         <p className="notice-local">
           <LockIcon />
-          <span>
-            Your figures are saved only in this browser, on this device. Nothing is sent anywhere, and you will never be
-            asked for a RAMIS or bank password. On a shared computer, delete a person&rsquo;s figures when you&rsquo;re
-            done.
-          </span>
+          <span>Saved in this browser only. Nothing is uploaded.</span>
         </p>
 
         <TaxApp />

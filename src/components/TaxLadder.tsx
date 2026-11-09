@@ -26,9 +26,7 @@ export function TaxLadder({ result, rules }: { result: CalculationResult; rules:
         <span className="ladder-note">
           {result.taxable === 0
             ? `All of your income is within the Rs ${fmt(rules.reliefs.personal.amount)} tax-free allowance.`
-            : result.concessionaryIncome > 0
-              ? `Local income fills the lower bands; foreign income sits on top, capped at ${pct(rules.foreignSourceIncome.maxRate)}.`
-              : 'Each slice of income is taxed at its own rate.'}
+            : ''}
         </span>
       </figcaption>
       <div className="ladder-bar" role="img" aria-label={label}>

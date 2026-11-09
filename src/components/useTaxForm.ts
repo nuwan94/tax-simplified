@@ -16,7 +16,6 @@ import {
 import { parseAmount, parseCents } from '@/lib/money';
 import { peggedSplit, summarizeMonths, type PayMonth } from '@/lib/payslips';
 import { convertMonthly, getFxRates, parseForeignAmount, yaMonths, type Conversion } from '@/lib/fx';
-import { computeReadiness } from '@/lib/readiness';
 import { addableSections, visibleSections, type ProfileId, type Section } from '@/lib/profiles';
 import type { TopicId } from './explainers';
 
@@ -134,7 +133,7 @@ export const QUESTIONS: { id: keyof Answers; text: string; hint: TopicId }[] = [
   },
   {
     id: 'allEmployersDeductedApit',
-    text: 'Did every employer operate APIT (PAYE) on your salary?',
+    text: 'Did every employer deduct APIT?',
     hint: 'apit',
   },
   {
@@ -408,7 +407,7 @@ export function useTaxForm(initial?: unknown, onSave?: (data: SavedForm) => void
   const outOfScope = obligation?.status === 'out_of_scope';
   const newKey = (prefix: string) => `${prefix}${nextId.current++}`;
 
-  // "I had no bank interest": an explicit answer, so readiness can tell "none" from "not entered yet".
+  // "No bank interest": an explicit answer, so "none" differs from "not entered yet".
   const [noInterest, setNoInterestState] = useState(init.noInterest);
   const setNoInterest = (on: boolean) => {
     setNoInterestState(on);
@@ -443,16 +442,6 @@ export function useTaxForm(initial?: unknown, onSave?: (data: SavedForm) => void
   }, [profile, extra, answers, employers, interests, businessRows, instalments, noInterest]);
 
   const apitEstimatedMonths = Object.values(payslips).reduce((n, p) => n + p.estimatedApitMonths, 0);
-
-  const readiness = computeReadiness({
-    // picking a profile counts as the first answer
-    answeredCount: answeredCount + (profile ? 1 : 0),
-    totalQuestions: questions.length + 1,
-    incomeEntered: emp.length + int.length + biz.length > 0,
-    interestSettled: noInterest || int.length > 0,
-    checksPassed: !!result && !hasErrors && result.warnings.length === 0,
-    hasErrors,
-  });
 
   const setProfile = (id: ProfileId) => {
     setProfileState(id);
@@ -556,7 +545,6 @@ export function useTaxForm(initial?: unknown, onSave?: (data: SavedForm) => void
     result,
     obligation,
     outOfScope,
-    readiness,
     today,
   };
 }
